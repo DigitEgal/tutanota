@@ -189,17 +189,6 @@ async function buildWebapp(version) {
 					"@babel/plugin-transform-flow-strip-types",
 					"@babel/plugin-proposal-class-properties",
 					"@babel/plugin-syntax-dynamic-import",
-					"@babel/plugin-transform-arrow-functions",
-					"@babel/plugin-transform-classes",
-					"@babel/plugin-transform-computed-properties",
-					"@babel/plugin-transform-destructuring",
-					"@babel/plugin-transform-for-of",
-					"@babel/plugin-transform-parameters",
-					"@babel/plugin-transform-shorthand-properties",
-					"@babel/plugin-transform-spread",
-					"@babel/plugin-transform-template-literals",
-					"@babel/plugin-transform-block-scoping",
-					"@babel/plugin-proposal-object-rest-spread",
 				],
 				babelHelpers: "bundled",
 			}),
@@ -487,11 +476,11 @@ function createHtml(env) {
 	}
 	// We need to import bluebird early as it Promise must be replaced before any of our code is executed
 	const imports = [{src: "polyfill.js"}, {src: jsFileName}]
-	return Promise.all([
-		_writeFile(`./build/dist/${jsFileName}`,
-			`window.whitelabelCustomizations = null
+	const index = `window.whitelabelCustomizations = null
 window.env = ${JSON.stringify(env, null, 2)}
-System.import('./app.js')`),
+${indexTemplate}`
+	return Promise.all([
+		_writeFile(`./build/dist/${jsFileName}`, index),
 		renderHtml(imports, env).then((content) => _writeFile(`./build/dist/${htmlFileName}`, content))
 	])
 }
@@ -655,3 +644,32 @@ function analyzer() {
 		},
 	}
 }
+
+const indexTemplate = `
+Promise.config({
+	longStackTraces: false,
+	warnings: false
+})
+
+System.import('./app.js').catch((e) => {
+	const img = document.createElement("img")
+	img.src = "images/logo-solo-red.svg"
+	img.style.display = "block"
+	img.style.margin = "0 auto"
+	document.body.appendChild(img)
+
+	const h1 = document.createElement("h1")
+	h1.innerText = "Tutanota"
+	h1.style.fontFamily = "sans-serif"
+	h1.style.fontSize = "40px"
+	h1.style.textAlign = "center"
+	document.body.appendChild(h1)
+
+	const div = document.createElement("div")
+	div.style.fontFamily = "sans-serif"
+	div.style.textAlign = "center"
+	div.style.fontSize = "24px"
+	document.body.appendChild(div)
+	div.innerHTML = \`Seems like your browser is not supported or outdated. Please see <a href="https://tutanota.com/faq/#browser-support" target="_blank">FAQ entry</a> for more information.\`
+})
+`

@@ -51,7 +51,7 @@ client.init(navigator.userAgent, navigator.platform)
 // this needs to stay after client.init
 windowFacade.init()
 
-export const state: {prefix: ?string, prefixWithoutFile: ?string} = (module.hot && module.hot.data)
+export const state: {prefix: ?string, prefixWithoutFile: ?string} = (typeof module != "undefined" && module.hot && module.hot.data)
 	? downcast(module.hot.data.state) : {prefix: null, prefixWithoutFile: null}
 
 let startRoute = "/"
