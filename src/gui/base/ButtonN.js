@@ -280,6 +280,9 @@ export class ButtonN implements MComponent<LifecycleAttrs<ButtonAttrs>> {
 		}
 		if (type === ButtonType.Toggle) {
 			classes.push("pr-s pb-2")
+			if (!a.icon) {
+				classes.push("pl-s")
+			}
 		}
 
 		return m("", {

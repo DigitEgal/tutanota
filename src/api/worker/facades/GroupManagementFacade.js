@@ -22,6 +22,7 @@ import {SysService} from "../../entities/sys/Services"
 import type {InternalGroupData} from "../../entities/tutanota/InternalGroupData"
 import type {User} from "../../entities/sys/User"
 import type {Group} from "../../entities/sys/Group"
+import {createTemplateGroupPostData} from "../../entities/tutanota/TemplateGroupPostData"
 
 assertWorkerOrNode()
 
@@ -54,14 +55,14 @@ export class GroupManagementFacade {
 		let mailboxSessionKey = aes128RandomKey()
 
 		return generateRsaKey().then(keyPair => this.generateInternalGroupData(keyPair, mailGroupKey, mailGroupInfoSessionKey, adminGroupIds[0], adminGroupKey, customerGroupKey))
-		           .then(mailGroupData => {
-			           let data = createCreateMailGroupData()
-			           data.mailAddress = mailAddress
-			           data.encryptedName = encryptString(mailGroupInfoSessionKey, name)
-			           data.mailEncMailboxSessionKey = encryptKey(mailGroupKey, mailboxSessionKey)
-			           data.groupData = mailGroupData
-			           return serviceRequestVoid(TutanotaService.MailGroupService, HttpMethod.POST, data)
-		           })
+		                       .then(mailGroupData => {
+			                       let data = createCreateMailGroupData()
+			                       data.mailAddress = mailAddress
+			                       data.encryptedName = encryptString(mailGroupInfoSessionKey, name)
+			                       data.mailEncMailboxSessionKey = encryptKey(mailGroupKey, mailboxSessionKey)
+			                       data.groupData = mailGroupData
+			                       return serviceRequestVoid(TutanotaService.MailGroupService, HttpMethod.POST, data)
+		                       })
 	}
 
 	createLocalAdminGroup(name: string): Promise<void> {
@@ -72,12 +73,35 @@ export class GroupManagementFacade {
 		let groupInfoSessionKey = aes128RandomKey()
 
 		return generateRsaKey().then(keyPair => this.generateInternalGroupData(keyPair, groupKey, groupInfoSessionKey, adminGroupId, adminGroupKey, customerGroupKey))
-		           .then(mailGroupData => {
-			           let data = createCreateLocalAdminGroupData()
-			           data.encryptedName = encryptString(groupInfoSessionKey, name)
-			           data.groupData = mailGroupData
-			           return serviceRequestVoid(TutanotaService.LocalAdminGroupService, HttpMethod.POST, data)
-		           })
+		                       .then(mailGroupData => {
+			                       let data = createCreateLocalAdminGroupData()
+			                       data.encryptedName = encryptString(groupInfoSessionKey, name)
+			                       data.groupData = mailGroupData
+			                       return serviceRequestVoid(TutanotaService.LocalAdminGroupService, HttpMethod.POST, data)
+		                       })
+	}
+
+	createTemplateGroup(name: string): Promise<void> {
+		const adminGroupId = this._login.getGroupId(GroupType.Admin)
+		const adminGroupKey = this._login.getGroupKey(adminGroupId)
+		const customerGroupKey = this._login.getGroupKey(this._login.getGroupId(GroupType.Customer))
+		const userGroupKey = this._login.getUserGroupKey()
+
+		let templateGroupKey = aes128RandomKey()
+		let templateGroupRootSessionKey = aes128RandomKey()
+		let templateGroupInfoSessionKey = aes128RandomKey()
+		return generateRsaKey().then(keyPair => this.generateInternalGroupData(keyPair, templateGroupKey, templateGroupInfoSessionKey, adminGroupId, adminGroupKey, customerGroupKey))
+		                       .then(templateGroupData => {
+			                       const serviceData = createTemplateGroupPostData({
+				                       groupInfoEncName: encryptString(templateGroupInfoSessionKey, name),
+				                       ownerEncTemplateGroupRootSessionKey: encryptKey(templateGroupKey, templateGroupRootSessionKey),
+				                       userEncGroupKey: encryptKey(userGroupKey, templateGroupKey),
+				                       groupData: templateGroupData
+			                       })
+			                       return serviceRequestVoid(TutanotaService.TemplateGroupService, HttpMethod.POST, serviceData)
+		                       })
+
+
 	}
 
 	generateInternalGroupData(keyPair: RsaKeyPair, groupKey: Aes128Key, groupInfoSessionKey: Aes128Key, adminGroupId: ?Id, adminGroupKey: Aes128Key, ownerGroupKey: Aes128Key): InternalGroupData {

@@ -39,13 +39,22 @@ import {AppearanceSettingsViewer} from "./AppearanceSettingsViewer"
 import {isNavButtonSelected, NavButtonN} from "../gui/base/NavButtonN"
 import {Dialog} from "../gui/base/Dialog"
 import {AboutDialog} from "./AboutDialog"
-import {navButtonRoutes} from "../misc/RouteChange"
+import {navButtonRoutes, SETTINGS_PREFIX} from "../misc/RouteChange"
 import {size} from "../gui/size"
 import {FolderColumnView} from "../gui/base/FolderColumnView"
 import {FolderExpander} from "../gui/base/FolderExpander"
 import {isSameId} from "../api/common/utils/EntityUtils";
+import {TemplateListView} from "./TemplateListView"
+import {KnowledgeBaseListView} from "./KnowledgeBaseListView"
 
 assertMainOrNode()
+
+export type TemplateGroupExpander = {
+	groupID: Id,
+	groupName: string,
+	expanded: Stream<boolean>,
+	settingsFolder: SettingsFolder[]
+}
 
 export class SettingsView implements CurrentView {
 
@@ -56,6 +65,7 @@ export class SettingsView implements CurrentView {
 	_settingsDetailsColumn: ViewColumn;
 	_userFolders: SettingsFolder[];
 	_adminFolders: SettingsFolder[];
+	_templateGroupExpander: Array<TemplateGroupExpander>;
 	_selectedFolder: SettingsFolder;
 	_currentViewer: ?UpdatableSettingsViewer;
 	detailsViewer: ?UpdatableSettingsViewer; // the component for the details column. can be set by settings views
@@ -104,6 +114,9 @@ export class SettingsView implements CurrentView {
 			}
 		}
 
+		this._templateGroupExpander = []
+		this._createTemplateGroupExpander()
+
 		this._selectedFolder = this._userFolders[0]
 
 		const userFolderExpanded = stream(true)
@@ -125,6 +138,12 @@ export class SettingsView implements CurrentView {
 							}, this._createFolderExpanderChildren(this._adminFolders)),
 						]
 						: null,
+					this._templateGroupExpander.map(templateGroupExpander => {
+						return m(FolderExpander, {
+							label: () => templateGroupExpander.groupName,
+							expanded: templateGroupExpander.expanded,
+						}, this._createFolderExpanderChildren(templateGroupExpander.settingsFolder))
+					}),
 					isTutanotaDomain() ? this._aboutThisSoftwareLink() : null,
 				]),
 				ariaLabel: "settings_label"
@@ -194,21 +213,55 @@ export class SettingsView implements CurrentView {
 		return this._currentViewer
 	}
 
+	_createTemplateGroupExpander(): Promise<void> {
+		return locator.templateGroupModel.init().then(templateGroupInstances => {
+				this._templateGroupExpander = []
+				templateGroupInstances.forEach(templateGroupInstance => {
+					// Create Settingsfolder
+					const expanded = stream(true)
+					let templateGroupExpander: TemplateGroupExpander = {
+						groupID: templateGroupInstance.groupRoot._id,
+						groupName: templateGroupInstance.groupInfo.name,
+						expanded,
+						settingsFolder: []
+					}
+					templateGroupExpander.settingsFolder.push(
+						new SettingsFolder("template_label", () => Icons.Folder, "template-"
+							+ templateGroupInstance.groupInfo.name, () => new TemplateListView(this, locator.entityClient, templateGroupInstance.groupRoot)))
+					templateGroupExpander.settingsFolder.push(
+						new SettingsFolder("knowledgebase_label", () => Icons.Archive, "knowledgebase-"
+							+ templateGroupInstance.groupInfo.name, () => new KnowledgeBaseListView(this, locator.entityClient, templateGroupInstance.groupRoot)))
+					this._templateGroupExpander.push(templateGroupExpander)
+
+				})
+				m.redraw()
+			}
+		)
+	}
+
 	/**
 	 * Notifies the current view about changes of the url within its scope.
 	 */
 	updateUrl(args: Object) {
 		if (!args.folder) {
 			this._setUrl(this._userFolders[0].url)
-		} else if (args.folder && this._selectedFolder.path !== args.folder
-			|| !m.route.get().startsWith("/settings")) { // ensure that current viewer will be reinitialized
+		} else if (args.folder || !m.route.get().startsWith("/settings")) { // ensure that current viewer will be reinitialized
 			let folder = this._userFolders.find(f => f.path === args.folder)
 			if (!folder && logins.getUserController().isGlobalOrLocalAdmin()) {
 				folder = this._adminFolders.find(f => f.path === args.folder)
 			}
+			if (!folder && logins.getUserController().getTemplateMemberships().length > 0) {
+				this._templateGroupExpander.find(templateGroupExpander => {
+					folder = templateGroupExpander.settingsFolder.find(f => f.path === args.folder)
+					return folder
+				})
+			}
 			if (!folder) {
 				this._setUrl(this._userFolders[0].url)
-			} else {
+			} else if (this._selectedFolder.path === folder.path) {// folder path has not changed
+				this._selectedFolder = folder // instance of SettingsFolder might have been changed in membership update, so replace this instance
+				m.redraw()
+			} else { // folder path has changed
 				this._selectedFolder = folder
 				this._currentViewer = null
 				this.detailsViewer = null
@@ -242,6 +295,18 @@ export class SettingsView implements CurrentView {
 					if (!this._isGlobalOrLocalAdmin(user) && this._currentViewer
 						&& this._adminFolders.find(f => f.isActive())) {
 						this._setUrl(this._userFolders[0].url)
+					}
+					// Check if template group memberships have changed
+					const existingTemplateGroupMemberships = this._templateGroupExpander.map(templateGroupExpander => templateGroupExpander.groupID)
+					const newTemplateGroupMemberships = logins.getUserController().getTemplateMemberships().map(membership => membership.group)
+					if (existingTemplateGroupMemberships.length !== newTemplateGroupMemberships.length) {
+						this._createTemplateGroupExpander()
+						    .then(() => {
+							    if (m.route.get().startsWith(SETTINGS_PREFIX)) {
+								    this._setUrl(m.route.get())
+								    m.redraw()
+							    }
+						    })
 					}
 					m.redraw()
 				})

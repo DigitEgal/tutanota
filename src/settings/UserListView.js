@@ -43,6 +43,7 @@ export class UserListView implements UpdatableSettingsViewer {
 	_adminUserGroupInfoIds: Id[];
 	onremove: Function;
 
+
 	constructor(settingsView: SettingsView) {
 		this._adminUserGroupInfoIds = []
 		this._settingsView = settingsView
@@ -50,6 +51,7 @@ export class UserListView implements UpdatableSettingsViewer {
 			return load(CustomerTypeRef, neverNull(logins.getUserController().user.customer)).then(customer => {
 				return customer.userGroups
 			})
+
 		})
 
 		this.list = new List({

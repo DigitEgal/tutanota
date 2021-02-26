@@ -116,6 +116,13 @@ const map: {[string]: () => mixed} = {
     EntropyData: () => import('./EntropyData'),
     OutOfOfficeNotificationMessage: () => import('./OutOfOfficeNotificationMessage'),
     OutOfOfficeNotification: () => import('./OutOfOfficeNotification'),
-    OutOfOfficeNotificationRecipientList: () => import('./OutOfOfficeNotificationRecipientList')
+    OutOfOfficeNotificationRecipientList: () => import('./OutOfOfficeNotificationRecipientList'),
+    EmailTemplateContent: () => import('./EmailTemplateContent'),
+    EmailTemplate: () => import('./EmailTemplate'),
+    KnowledgeBaseEntryKeywords: () => import('./KnowledgeBaseEntryKeywords'),
+    KnowledgeBaseEntry: () => import('./KnowledgeBaseEntry'),
+    TemplateGroupRoot: () => import('./TemplateGroupRoot'),
+    TemplateGroupPostData: () => import('./TemplateGroupPostData'),
+    TemplateGroupDeleteData: () => import('./TemplateGroupDeleteData')
 }
 export default map

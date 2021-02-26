@@ -46,7 +46,8 @@ export const GroupType = Object.freeze({
 	Contact: "6",
 	File: "7",
 	LocalAdmin: "8",
-	Calendar: "9"
+	Calendar: "9",
+	Template: "10"
 })
 export type GroupTypeEnum = $Values<typeof GroupType>;
 export const getMembershipGroupType = (membership: GroupMembership): GroupTypeEnum => downcast(membership.groupType)

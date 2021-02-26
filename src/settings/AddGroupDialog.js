@@ -16,8 +16,12 @@ import type {TranslationKey} from "../misc/LanguageViewModel"
 import {lang} from "../misc/LanguageViewModel"
 import stream from "mithril/stream/stream.js"
 import {showBuyDialog} from "../subscription/BuyDialog"
+import {PreconditionFailedError} from "../api/common/error/RestError"
+import {showBusinessFeatureRequiredDialog} from "../misc/SubscriptionDialogs"
 
 assertMainOrNode()
+
+const BUSINESS_FEATURE_REQUIRED = "templategroup.business_feature_required"
 
 export function show() {
 	if (getAvailableGroupTypes().length === 0) {
@@ -57,6 +61,12 @@ export function show() {
 								return worker.createLocalAdminGroup(nameField.value())
 							}
 						}))
+				} else if (typeField.selectedValue() === GroupType.Template) {
+					addTemplateGroup(nameField.value()).then(success => {
+						if (success) {
+							dialog.close()
+						}
+					})
 				}
 			}
 
@@ -70,10 +80,12 @@ export function show() {
 	}
 }
 
-function _validateAddGroupInput(type: string, name: string, mailAddressForm: SelectMailAddressForm): ?TranslationKey {
-	if (type === GroupType.Mail) {
+function _validateAddGroupInput(type: string, name: string, mailAddressForm: ?SelectMailAddressForm): ?TranslationKey {
+	if (type === GroupType.Mail && mailAddressForm) {
 		return mailAddressForm.getErrorMessageId()
 	} else if (type === GroupType.MailingList && name.trim() === "") {
+		return "enterName_msg"
+	} else if (type === GroupType.Template && name.trim() === "") {
 		return "enterName_msg"
 	} else {
 		return null
@@ -86,6 +98,52 @@ function getAvailableGroupTypes(): GroupTypeEnum[] {
 	} else if (logins.isProdDisabled()) {
 		return logins.getUserController().isGlobalAdmin() ? [GroupType.LocalAdmin] : []
 	} else {
-		return logins.getUserController().isGlobalAdmin() ? [GroupType.Mail, GroupType.LocalAdmin] : [GroupType.Mail]
+		return logins.getUserController().isGlobalAdmin() ? [GroupType.Mail, GroupType.LocalAdmin, GroupType.Template] : [GroupType.Mail]
 	}
+}
+
+
+/**
+ * @returns {Promise<boolean>} true if group was added, false otherwise
+ */
+function addTemplateGroup(name: string): Promise<boolean> {
+	return showProgressDialog("pleaseWait_msg",
+		worker.createTemplateGroup(name)
+		      .then(() => true)
+		      .catch(PreconditionFailedError, (e) => {
+			      if (e.data === BUSINESS_FEATURE_REQUIRED) {
+				      showBusinessFeatureRequiredDialog("businessFeatureRequiredGeneral_msg")
+			      } else {
+				      Dialog.error(() => e.message)
+			      }
+			      return false
+		      }))
+}
+
+export function showAddTemplateGroupDialog() {
+	const addGroupOkAction = (dialog) => {
+		addTemplateGroup(nameField.value()).then(success => {
+			if (success) {
+				dialog.close()
+			}
+		})
+	}
+
+	let nameField = new TextField("name_label")
+	let form = {
+		view: () => {
+			return [
+				m(".pt", lang.get("templateGroupRequired_msg")),
+				m(nameField),
+			]
+		}
+	}
+
+	Dialog.showActionDialog({
+		title: lang.get("addGroup_label"),
+		child: form,
+		validator: () => _validateAddGroupInput(GroupType.Template, nameField.value(), null),
+		okAction: addGroupOkAction
+	})
+
 }
