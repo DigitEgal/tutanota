@@ -13,7 +13,6 @@ import path from "path"
 import {noOp} from "../api/common/utils/Utils"
 import type {TranslationKey} from "../misc/LanguageViewModel"
 import {log} from "./DesktopLog"
-import {pathToFileURL} from "./PathUtils"
 import type {LocalShortcutManager} from "./electron-localshortcut/LocalShortcut"
 
 const MINIMUM_WINDOW_SIZE: number = 350
@@ -58,7 +57,9 @@ export class ApplicationWindow {
 		this._ipc = wm.ipc
 		this._electron = electron
 		this._localShortcut = localShortcutManager
-		this._startFile = pathToFileURL(path.join(this._electron.app.getAppPath(), conf.getConst("desktophtml")),)
+		const startFilePath = path.join(this._electron.app.getAppPath(), conf.getConst("desktophtml"))
+		// file:// URL that can be extended with query parameters and loaded with BrowserWindow.loadURL()
+		this._startFile = url.format(url.pathToFileURL(startFilePath))
 		this._lastSearchPromiseReject = noOp
 
 		const isMac = process.platform === 'darwin';
@@ -158,7 +159,7 @@ export class ApplicationWindow {
 		this._browserWindow.webContents.session.setPermissionRequestHandler(this._permissionRequestHandler)
 		wm.dl.manageDownloadsForSession(this._browserWindow.webContents.session)
 
-		const appFileUrl = pathToFileURL(this._electron.app.getAppPath())
+		const appFileUrl = url.format(url.pathToFileURL(this._electron.app.getAppPath()))
 
 		this._browserWindow
 		    .on('closed', () => {
