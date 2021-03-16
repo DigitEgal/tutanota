@@ -264,7 +264,7 @@ export class SearchView implements CurrentView {
 				? m(ButtonN, {
 					click: () => {
 						locator.contactModel.contactListId().then(contactListId => {
-							new ContactEditor(null, contactListId, null).show()
+							new ContactEditor(locator.entityClient,null, contactListId, null).show()
 						})
 					},
 					label: "newContact_action",
@@ -408,7 +408,7 @@ export class SearchView implements CurrentView {
 						newMailEditor().then(editor => editor.show()).catch(PermissionError, noOp)
 					} else if (isSameTypeRef(restriction, ContactTypeRef)) {
 						locator.contactModel.contactListId().then(contactListId => {
-							new ContactEditor(null, contactListId, null).show()
+							new ContactEditor(locator.entityClient, null, contactListId, null).show()
 						})
 					}
 				},
@@ -560,7 +560,7 @@ export class SearchView implements CurrentView {
 			return {
 				click: () => {
 					locator.contactModel.contactListId().then(contactListId => {
-						new ContactEditor(null, contactListId, null).show()
+						new ContactEditor(locator.entityClient,null, contactListId, null).show()
 					})
 				},
 				label: "newContact_action",

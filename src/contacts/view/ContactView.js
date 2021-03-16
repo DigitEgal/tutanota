@@ -128,7 +128,7 @@ export class ContactView implements CurrentView {
 	}
 
 	createNewContact(): void {
-		new ContactEditor(null, this._contactList.listId, contactId => this._contactList.list.scrollToIdAndSelectWhenReceived(contactId)).show()
+		new ContactEditor(locator.entityClient,null, this._contactList.listId, contactId => this._contactList.list.scrollToIdAndSelectWhenReceived(contactId)).show()
 	}
 
 	headerRightView(): Children {

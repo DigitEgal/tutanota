@@ -251,7 +251,7 @@ export class ContactViewer {
 	}
 
 	edit() {
-		new ContactEditor(this.contact).show()
+		new ContactEditor(locator.entityClient, this.contact).show()
 	}
 
 
