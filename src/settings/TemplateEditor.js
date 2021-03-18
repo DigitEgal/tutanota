@@ -89,7 +89,7 @@ class TemplateEditor implements MComponent<TemplateEditorAttrs> {
 		}
 
 		this._enterTagAttrs = {
-			label: "tag_label",
+			label: "shortcut_label",
 			value: model.tag
 		}
 

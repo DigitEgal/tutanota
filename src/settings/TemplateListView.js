@@ -165,7 +165,7 @@ export function createTemplates(gorgiasTemplates: Array<Array<string>>, template
 export function parseCSV(data: string): Array<Array<string>> {
 	let result = []
 	// let lines = data.split("\r\n")
-	let lines = data.split("$$$") // temporary fix
+	let lines = data.split("\r\n") // temporary fix
 	lines.shift()
 	lines.forEach(line => {
 		let lineAsArray = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/) // ignore , inside quoted strings

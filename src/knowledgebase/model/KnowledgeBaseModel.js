@@ -30,7 +30,6 @@ export class KnowledgeBaseModel {
 	selectedEntry: Stream<?KnowledgeBaseEntry>
 	_allKeywords: Array<string>
 	_matchedKeywordsInContent: Array<?string>
-	_isActive: boolean
 	_filterValue: string
 	+_eventController: EventController;
 	+_entityEventReceived: EntityEventsListener;
@@ -49,7 +48,6 @@ export class KnowledgeBaseModel {
 		this._matchedKeywordsInContent = []
 		this.filteredEntries = stream(this._allEntries)
 		this.selectedEntry = stream(null)
-		this._isActive = false
 		this._filterValue = ""
 		this._templateGroupModel = templateGroupModel
 		this._entityEventReceived = (updates) => {
@@ -91,14 +89,6 @@ export class KnowledgeBaseModel {
 
 	containsResult(): boolean {
 		return this.filteredEntries().length > 0
-	}
-
-	setActive() {
-		this._isActive = true
-	}
-
-	getStatus(): boolean {
-		return this._isActive
 	}
 
 	getAllKeywords(): Array<string> {
@@ -183,10 +173,6 @@ export class KnowledgeBaseModel {
 
 	dispose() {
 		this._eventController.removeEntityListener(this._entityEventReceived)
-	}
-
-	close() {
-		this._isActive = false
 	}
 
 	loadTemplate(templateId: IdTuple): Promise<EmailTemplate> {

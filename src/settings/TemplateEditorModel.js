@@ -100,7 +100,7 @@ export class TemplateEditorModel {
 			return Promise.reject(new UserError("emptyTitle_msg"))
 		}
 		if (!this.tag()) {
-			return Promise.reject(new UserError("emptyTag_msg"))
+			return Promise.reject(new UserError("emptyShortcut_msg"))
 		}
 		this.updateContent()
 
@@ -109,7 +109,7 @@ export class TemplateEditorModel {
 
 		return this.tagAlreadyExists().then(exists => {
 			if (exists) {
-				return Promise.reject(new UserError("templateTagExists_msg"))
+				return Promise.reject(new UserError("templateShortcutExists_msg"))
 			} else if (this.template._id) {
 				return this._entityClient.update(this.template)
 			} else {

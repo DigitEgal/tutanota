@@ -63,12 +63,14 @@ export class Dialog {
 	view: Function;
 	visible: boolean;
 	_focusOnLoadFunction: Function;
+	_wasFocusOnLoadCalled: boolean
 	_closeHandler: ?() => mixed;
 	_focusedBeforeShown: ?HTMLElement
 
 	constructor(dialogType: DialogTypeEnum, childComponent: MComponent<any>) {
 		this.visible = false
 		this._focusOnLoadFunction = this._defaultFocusOnLoad
+		this._wasFocusOnLoadCalled = false
 		this._shortcuts = [
 			{
 				key: Keys.TAB,
@@ -129,6 +131,7 @@ export class Dialog {
 							})
 							animation.then(() => {
 								this._focusOnLoadFunction()
+								this._wasFocusOnLoadCalled = true
 							})
 						},
 					}, m(childComponent))
@@ -151,9 +154,13 @@ export class Dialog {
 
 	/**
 	 * By default the focus is set on the first text field after this dialog is fully visible. This behavior can be overwritten by calling this function.
+	 * If it has already been called, then calls it instantly
 	 */
 	setFocusOnLoadFunction(callback: Function): void {
 		this._focusOnLoadFunction = callback
+		if (this._wasFocusOnLoadCalled) {
+			this._focusOnLoadFunction()
+		}
 	}
 
 	_getDialogWrapperStyle(dialogType: DialogTypeEnum): string {

@@ -229,7 +229,7 @@ export class SettingsView implements CurrentView {
 						new SettingsFolder("template_label", () => Icons.Folder, "template-"
 							+ templateGroupInstance.groupInfo.name, () => new TemplateListView(this, locator.entityClient, templateGroupInstance.groupRoot)))
 					templateGroupExpander.settingsFolder.push(
-						new SettingsFolder("knowledgebase_label", () => Icons.Archive, "knowledgebase-"
+						new SettingsFolder("knowledgebase_label", () => Icons.Archive, "knowledgeBase-"
 							+ templateGroupInstance.groupInfo.name, () => new KnowledgeBaseListView(this, locator.entityClient, templateGroupInstance.groupRoot)))
 					this._templateGroupExpander.push(templateGroupExpander)
 

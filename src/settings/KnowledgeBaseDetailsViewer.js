@@ -17,7 +17,7 @@ import {showKnowledgeBaseEditor} from "./KnowledgeBaseEditor"
 import {TemplateGroupRootTypeRef} from "../api/entities/tutanota/TemplateGroupRoot"
 
 /**
- *  Renders one knowledgebase entry in the settings
+ *  Renders one knowledgeBase entry in the settings
  */
 
 export class KnowledgeBaseDetailsViewer {

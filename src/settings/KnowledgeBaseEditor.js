@@ -28,7 +28,7 @@ import type {DropDownChildAttrs} from "../gui/base/DropdownN"
 import {TEMPLATE_SHORTCUT_PREFIX} from "../templates/model/TemplateModel"
 
 /**
- *  Editor to edit / add a knowledgebase entry
+ *  Editor to edit / add a knowledgeBase entry
  */
 export function showKnowledgeBaseEditor(entry: ?KnowledgeBaseEntry, templateGroupRoot: TemplateGroupRoot): void {
 	const entityClient = locator.entityClient

@@ -14,7 +14,7 @@ type KnowledgeBaseEntryViewAttrs = {
 }
 
 /**
- *  Renders one knowledgebase entry
+ *  Renders one knowledgeBase entry
  */
 
 export class KnowledgeBaseEntryView implements MComponent<KnowledgeBaseEntryViewAttrs> {

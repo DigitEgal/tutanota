@@ -10,7 +10,7 @@ export type KnowledgebaseListEntryAttrs = {
 export const KNOWLEDGEBASE_LIST_ENTRY_HEIGHT = 50
 
 /**
- *  Renders one list entry of the knowledgebase
+ *  Renders one list entry of the knowledgeBase
  */
 
 export class KnowledgeBaseListEntry implements MComponent<KnowledgebaseListEntryAttrs> {

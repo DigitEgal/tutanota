@@ -20,7 +20,7 @@ import {assertMainOrNode} from "../api/common/Env"
 assertMainOrNode()
 
 /**
- *  List that is rendered within the knowledgebase Settings
+ *  List that is rendered within the knowledgeBase Settings
  */
 
 export class KnowledgeBaseListView implements UpdatableSettingsViewer {

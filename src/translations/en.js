@@ -1316,7 +1316,7 @@ export default {
 		"template_label": "Templates",
 		"templateGroup_label": "Template",
 		"title_label": "Title",
-		"tag_label": "Tag",
+		"shortcut_label": "Shortcut",
 		"submit_label": "Submit",
 		"content_label": "Content",
 		"languageContentEmpty_msg": "The content of {language} is empty!",
@@ -1338,15 +1338,15 @@ export default {
 		"addEntry_label": "Add entry",
 		"deleteEntryConfirm_msg": "Are you sure you want to delete the Entry?",
 		"noLinkedTemplate_label": "No template linked",
-		"linkedTemplateTag_label": "Linked template tag: ",
+		"linkedTemplateShortcut_label": "Linked template shortcut: ",
 		"chooseKeyword_action": "Choose filter keyword",
 		"searchTitle_label": "Search for title",
 		"deleteTemplate_msg": "Are you sure you want to delete the template?",
 		"addTemplate_label": "Add template",
 		"noEntryFound_label": "No entries found",
 		"chooseFilterKeyword_label": "Add filter keyword",
-		"templateTagExists_msg": "Template tag already exists!",
-		"emptyTag_msg": "The tag is empty",
+		"templateShortcutExists_msg": "Template shortcut already exists!",
+		"emptyShortcut_msg": "The shortcut is empty",
 		"matchingKeywords_label": "Matching keywords:",
 		"linkTemplate_label": "Link template",
 		"selectGroup_label": "Select group",
@@ -1359,7 +1359,8 @@ export default {
 		"openKnowledgebase_action": "Open Knowledgebase",
 		"tooManyCustomDomains_msg": "Too many custom domains. Only one domain is allowed when deactivating the business feature.",
 		"featureRequiredForBusinessUse_msg": "This feature is required for business use.",
-		"deleteTemplateGroups_msg": "Please remove all template groups before deactivating the business feature."
+		"deleteTemplateGroups_msg": "Please remove all template groups before deactivating the business feature.",
+		"openTemplatePopup_msg": "Open templates popup"
 
 
 	}

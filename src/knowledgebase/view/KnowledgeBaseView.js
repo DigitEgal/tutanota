@@ -28,7 +28,8 @@ import {windowFacade} from "../../misc/WindowFacade"
 
 type KnowledgebaseViewAttrs = {
 	onTemplateSelect: (EmailTemplate) => void,
-	model: KnowledgeBaseModel
+	model: KnowledgeBaseModel,
+	parentDialog: Dialog
 }
 
 export const KNOWLEDGEBASE_PANEL_HEIGHT = 840;
@@ -40,7 +41,7 @@ export type Page =
 	| {type: "entry", entry: IdTuple}
 
 /**
- *  Renders the SearchBar and the pages (list, entry, template) of the knowledgebase besides the MailEditor
+ *  Renders the SearchBar and the pages (list, entry, template) of the knowledgeBase besides the MailEditor
  */
 
 export class KnowledgeBaseView implements MComponent<KnowledgebaseViewAttrs> {
@@ -54,9 +55,7 @@ export class KnowledgeBaseView implements MComponent<KnowledgebaseViewAttrs> {
 	constructor({attrs}: Vnode<KnowledgebaseViewAttrs>) {
 		this._searchbarValue = stream("")
 		this._pages = stream([{type: "list"}])
-		this._resizeListener = () => {
-			attrs.model.close()
-		}
+
 	}
 
 
@@ -108,7 +107,7 @@ export class KnowledgeBaseView implements MComponent<KnowledgebaseViewAttrs> {
 					},
 				})
 			default:
-				throw new Error("stub")
+				throw new Error(`invalid knowledge base view page type "${currentPage.type}"`)
 		}
 	}
 
@@ -120,7 +119,7 @@ export class KnowledgeBaseView implements MComponent<KnowledgebaseViewAttrs> {
 				return renderHeaderBar(lang.get("knowledgebase_label"), {
 					label: "close_alt",
 					click: () => {
-						knowledgebase.close()
+						attrs.parentDialog.close()
 					},
 					type: ButtonType.Secondary,
 				}, this.createAddButtonAttributes())

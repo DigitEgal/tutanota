@@ -4,6 +4,7 @@ import {TEMPLATE_SHORTCUT_PREFIX} from "./TemplateModel"
 
 
 export function searchInTemplates(input: string, allTemplates: Array<EmailTemplate>): Array<EmailTemplate> {
+
 	let matchedTemplates = []
 	let queryWords = input.toLowerCase().trim().split(" ")
 	for (const queryString of queryWords) {

@@ -196,7 +196,11 @@ export class TemplatePopup implements ModalComponent {
 						? SELECT_PREV_TEMPLATE
 						: SELECT_NEXT_TEMPLATE)
 					if (changedSelection) {
-						this._scroll()
+						this._scrollDom.scroll({
+							top: (TEMPLATE_LIST_ENTRY_HEIGHT * this._templateModel.getSelectedTemplateIndex()),
+							left: 0,
+							behavior: 'smooth'
+						})
 					}
 					return false
 				} else {
@@ -387,14 +391,6 @@ export class TemplatePopup implements ModalComponent {
 
 	_getWindowWidthChange(): number {
 		return window.innerWidth - this._initialWindowWidth
-	}
-
-	_scroll() {
-		this._scrollDom.scroll({
-			top: (TEMPLATE_LIST_ENTRY_HEIGHT * this._templateModel.getSelectedTemplateIndex()),
-			left: 0,
-			behavior: 'smooth'
-		})
 	}
 
 	show() {
