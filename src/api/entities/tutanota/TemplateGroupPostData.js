@@ -3,7 +3,6 @@
 import {create} from "../../common/utils/EntityUtils"
 import {TypeRef} from "../../common/utils/TypeRef"
 
-import type {InternalGroupData} from "./InternalGroupData"
 
 export const TemplateGroupPostDataTypeRef: TypeRef<TemplateGroupPostData> = new TypeRef("tutanota", "TemplateGroupPostData")
 export const _TypeModel: TypeModel = {
@@ -22,6 +21,20 @@ export const _TypeModel: TypeModel = {
 			"final": false,
 			"encrypted": false
 		},
+		"adminEncGroupKey": {
+			"id": 1195,
+			"type": "Bytes",
+			"cardinality": "ZeroOrOne",
+			"final": false,
+			"encrypted": false
+		},
+		"groupEncGroupRootSessionKey": {
+			"id": 1192,
+			"type": "Bytes",
+			"cardinality": "One",
+			"final": false,
+			"encrypted": false
+		},
 		"groupInfoEncName": {
 			"id": 1191,
 			"type": "Bytes",
@@ -29,7 +42,7 @@ export const _TypeModel: TypeModel = {
 			"final": false,
 			"encrypted": false
 		},
-		"ownerEncTemplateGroupRootSessionKey": {
+		"ownerEncGroupInfoSessionKey": {
 			"id": 1193,
 			"type": "Bytes",
 			"cardinality": "One",
@@ -37,7 +50,7 @@ export const _TypeModel: TypeModel = {
 			"encrypted": false
 		},
 		"userEncGroupKey": {
-			"id": 1192,
+			"id": 1194,
 			"type": "Bytes",
 			"cardinality": "One",
 			"final": false,
@@ -45,12 +58,12 @@ export const _TypeModel: TypeModel = {
 		}
 	},
 	"associations": {
-		"groupData": {
-			"id": 1194,
-			"type": "AGGREGATION",
-			"cardinality": "One",
-			"final": false,
-			"refType": "InternalGroupData"
+		"adminGroup": {
+			"id": 1196,
+			"type": "ELEMENT_ASSOCIATION",
+			"cardinality": "ZeroOrOne",
+			"final": true,
+			"refType": "Group"
 		}
 	},
 	"app": "tutanota",
@@ -65,9 +78,11 @@ export type TemplateGroupPostData = {
 	_type: TypeRef<TemplateGroupPostData>;
 
 	_format: NumberString;
+	adminEncGroupKey: ?Uint8Array;
+	groupEncGroupRootSessionKey: Uint8Array;
 	groupInfoEncName: Uint8Array;
-	ownerEncTemplateGroupRootSessionKey: Uint8Array;
+	ownerEncGroupInfoSessionKey: Uint8Array;
 	userEncGroupKey: Uint8Array;
 
-	groupData: InternalGroupData;
+	adminGroup: ?Id;
 }

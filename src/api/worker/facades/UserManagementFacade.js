@@ -32,6 +32,8 @@ import type {UserAccountUserData} from "../../entities/tutanota/UserAccountUserD
 import type {CalendarGroupData} from "../../entities/tutanota/CalendarGroupData"
 import type {ContactFormUserData} from "../../entities/tutanota/ContactFormUserData"
 import {SystemKeysReturnTypeRef} from "../../entities/sys/SystemKeysReturn"
+import type {TemplateGroupPostData} from "../../entities/tutanota/TemplateGroupPostData"
+import {createTemplateGroupPostData} from "../../entities/tutanota/TemplateGroupPostData"
 
 assertWorkerOrNode()
 

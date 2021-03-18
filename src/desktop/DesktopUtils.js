@@ -170,7 +170,7 @@ function getLockFilePath() {
  * Writes contents with a random file name into the directory of the executable
  * @param contents
  * @returns {*} path  to the written file
- * @private
+ * @privateshortcut
  */
 function _writeToDisk(contents: string): string {
 	const filename = randomHexString(12)

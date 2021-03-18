@@ -7,8 +7,8 @@ import {MailModel} from "../../mail/model/MailModel"
 import {assertMainOrNode} from "../common/Env"
 import {notifications} from "../../gui/Notifications"
 import {logins} from "./LoginController"
-import {ContactModelImpl} from "../../contacts/model/ContactModel"
 import type {ContactModel} from "../../contacts/model/ContactModel"
+import {ContactModelImpl} from "../../contacts/model/ContactModel"
 import {EntityClient} from "../common/EntityClient"
 import type {CalendarModel} from "../../calendar/model/CalendarModel"
 import {CalendarModelImpl} from "../../calendar/model/CalendarModel"
@@ -31,7 +31,7 @@ export type MainLocatorType = {|
 	entityClient: EntityClient;
 	progressTracker: ProgressTracker;
 	templateModel: TemplateModel;
-	knowledgebase: KnowledgeBaseModel;
+	knowledgeBase: KnowledgeBaseModel;
 	templateGroupModel: TemplateGroupModel;
 	initializedWorker: Promise<WorkerClient>
 |}
@@ -48,7 +48,7 @@ export const locator: MainLocatorType = ({
 		this.entityClient = new EntityClient(worker)
 		this.templateGroupModel = new TemplateGroupModel(locator.eventController, logins, locator.entityClient)
 		this.templateModel = new TemplateModel(locator.eventController, logins, locator.entityClient, this.templateGroupModel)
-		this.knowledgebase = new KnowledgeBaseModel(locator.eventController, logins, locator.entityClient, this.templateGroupModel)
+		this.knowledgeBase = new KnowledgeBaseModel(locator.eventController, logins, locator.entityClient, this.templateGroupModel)
 
 		this.mailModel = new MailModel(notifications, this.eventController, worker, this.entityClient)
 		this.calendarModel = new CalendarModelImpl(notifications, this.eventController, worker, logins, this.progressTracker,
