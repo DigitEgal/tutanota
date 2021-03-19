@@ -232,8 +232,20 @@ export class MailEditor implements MComponent<MailEditorAttrs> {
 			}
 		})
 
-		// Gotta call this at the bottom cause it accesses `this`
-		this.setupDialog(a.dialog(), a.model, this.editor)
+		const dialog = a.dialog()
+		if (model.getConversationType() === ConversationType.REPLY || model.toRecipients().length) {
+			dialog.setFocusOnLoadFunction(() => { this.editor.initialized.promise.then(() => this.editor.focus()) })
+		}
+
+		const shortcuts = [
+			{key: Keys.SPACE, ctrl: true, exec: () => this.openTemplates(this.editor), help: "templateOpen_label"},
+			// these are handled by squire
+			{key: Keys.B, ctrl: true, exec: noOp, help: "formatTextBold_msg"},
+			{key: Keys.I, ctrl: true, exec: noOp, help: "formatTextItalic_msg"},
+			{key: Keys.U, ctrl: true, exec: noOp, help: "formatTextUnderline_msg"}
+		]
+
+		shortcuts.forEach(dialog.addShortcut.bind(dialog))
 	}
 
 	view(vnode: Vnode<MailEditorAttrs>): Children {
@@ -430,36 +442,6 @@ export class MailEditor implements MComponent<MailEditorAttrs> {
 			showAddTemplateGroupDialog()
 		}
 	}
-
-	setupDialog(dialog: Dialog, model: SendMailModel, editor: Editor) {
-
-		if (model.getConversationType() === ConversationType.REPLY || model.toRecipients().length) {
-			dialog.setFocusOnLoadFunction(() => { editor.initialized.promise.then(() => editor.focus()) })
-		}
-
-		// Editor shortcuts
-		dialog.addShortcut({
-			key: Keys.SPACE,
-			ctrl: true,
-			exec: () => this.openTemplates(editor),
-			help: "templateOpen_label"
-		}).addShortcut({
-			key: Keys.B,
-			ctrl: true,
-			exec: noOp,
-			help: "formatTextBold_msg"
-		}).addShortcut({
-			key: Keys.I,
-			ctrl: true,
-			exec: noOp,
-			help: "formatTextItalic_msg"
-		}).addShortcut({
-			key: Keys.U,
-			ctrl: true,
-			exec: noOp,
-			help: "formatTextUnderline_msg"
-		})
-	}
 }
 
 
@@ -551,26 +533,17 @@ function createMailEditorDialog(model: SendMailModel, blockExternalContent: bool
 		locator.knowledgeBase
 	);
 
-	// Squire shortcuts are set in the MailEditor
+	const shortcuts = [
+		{key: Keys.ESC, exec() { closeButtonAttrs.click(newMouseEvent(), domCloseButton) }, help: "close_alt"},
+		{key: Keys.S, ctrl: true, exec: () => { save() }, help: "save_action"},
+		{key: Keys.S, ctrl: true, shift: true, exec: send, help: "send_action"},
+	]
+
 	dialog = Dialog.largeDialogN(headerBarAttrs, MailEditor, mailEditorAttrs)
-	               .addShortcut({
-		               key: Keys.ESC,
-		               exec() { closeButtonAttrs.click(newMouseEvent(), domCloseButton) },
-		               help: "close_alt"
-	               })
-	               .addShortcut({
-		               key: Keys.S,
-		               ctrl: true,
-		               exec: () => { save() },
-		               help: "save_action"
-	               })
-	               .addShortcut({
-		               key: Keys.S,
-		               ctrl: true,
-		               shift: true,
-		               exec: send,
-		               help: "send_action"
-	               }).setCloseHandler(() => closeButtonAttrs.click(newMouseEvent(), domCloseButton))
+	dialog.setCloseHandler(() => closeButtonAttrs.click(newMouseEvent(), domCloseButton))
+	for (let shortcut of shortcuts) {
+		dialog.addShortcut(shortcut)
+	}
 
 
 	return dialog

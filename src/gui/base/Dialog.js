@@ -8,7 +8,7 @@ import type {TranslationKey} from "../../misc/LanguageViewModel"
 import {lang} from "../../misc/LanguageViewModel"
 import {assertMainOrNode} from "../../api/common/Env"
 import type {KeyPress, Shortcut} from "../../misc/KeyManager"
-import {focusNext, focusPrevious} from "../../misc/KeyManager"
+import {focusNext, focusPrevious, keyManager} from "../../misc/KeyManager"
 import {getElevatedBackground} from "../theme"
 import {px, size} from "../size"
 import {HabReminderImage} from "./icons/Icons"
@@ -194,6 +194,9 @@ export class Dialog {
 
 	addShortcut(shortcut: Shortcut): Dialog {
 		this._shortcuts.push(shortcut)
+		if (this.visible) {
+			keyManager.registerModalShortcuts([shortcut])
+		}
 		return this
 	}
 
