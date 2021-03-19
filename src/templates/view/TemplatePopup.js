@@ -192,19 +192,30 @@ export class TemplatePopup implements ModalComponent {
 			placeholder: "filter_label",
 			keyHandler: (keyPress) => {
 				if (isKeyPressed(keyPress.keyCode, Keys.DOWN, Keys.UP)) {
-					const changedSelection = this._templateModel.selectNextTemplate(isKeyPressed(keyPress.keyCode, Keys.UP)
+					this._templateModel.selectNextTemplate(isKeyPressed(keyPress.keyCode, Keys.UP)
 						? SELECT_PREV_TEMPLATE
 						: SELECT_NEXT_TEMPLATE)
-					if (changedSelection) {
-						this._scrollDom.scroll({
-							top: (TEMPLATE_LIST_ENTRY_HEIGHT * this._templateModel.getSelectedTemplateIndex()),
-							left: 0,
-							behavior: 'smooth'
-						})
+
+					const scrollWindowHeight = this._scrollDom.getBoundingClientRect().height
+					const scrollOffset = this._scrollDom.scrollTop
+
+					// Actual position in the list
+					const selectedTop = TEMPLATE_LIST_ENTRY_HEIGHT * this._templateModel.getSelectedTemplateIndex()
+					const selectedBottom = selectedTop + TEMPLATE_LIST_ENTRY_HEIGHT
+
+					// Relative to the top of the scroll window
+					const selectedRelativeTop = selectedTop - scrollOffset
+					const selectedRelativeBottom = selectedBottom - scrollOffset
+
+					// clamp the selected item to stay between the top and bottom of the scroll window
+					if (selectedRelativeTop < 0) {
+						this._scrollDom.scrollTop = selectedTop
+					} else if (selectedRelativeBottom > scrollWindowHeight) {
+						this._scrollDom.scrollTop = selectedBottom - scrollWindowHeight
 					}
-					return false
-				} else {
 					return true
+				} else {
+					return false
 				}
 			},
 			oninput: (value) => {
@@ -328,13 +339,15 @@ export class TemplatePopup implements ModalComponent {
 	}
 
 	_renderLeftColumn(): Children {
-		return [
-			m(".flex.flex-column",
-				this._templateModel.containsResult() ?
-					this._templateModel.getSearchResults()().map((template, index) => this._renderTemplateListRow(template))
-					: m(".row-selected.text-center.pt", lang.get(this._templateModel.hasLoaded() ? "nothingFound_label" : "loadingTemplates_label"))
-			), // left end
-		]
+		return m(".flex.flex-column",
+			this._templateModel.containsResult()
+				? m(".templates-search-results", this._templateModel.getSearchResults()()
+				                                     .map((template, index) => this._renderTemplateListRow(template)))
+				: m(".row-selected.text-center.pt",
+				lang.get(this._templateModel.hasLoaded()
+					? "nothingFound_label"
+					: "loadingTemplates_label"))
+		)
 	}
 
 	_renderTemplateListRow: (EmailTemplate) => Children = (template: EmailTemplate) => {
