@@ -14,12 +14,17 @@ import {EmailTemplateTypeRef} from "../../api/entities/tutanota/EmailTemplate"
 import {lang} from "../../misc/LanguageViewModel"
 import {downcast} from "../../api/common/utils/Utils"
 import type {LoginController} from "../../api/main/LoginController"
-import type {TemplateGroupRoot} from "../../api/entities/tutanota/TemplateGroupRoot"
-import {TemplateGroupModel} from "../../templates/model/TemplateGroupModel"
 import {getElementId, isSameId} from "../../api/common/utils/EntityUtils"
+import type {TemplateGroupInstance} from "../../templates/model/TemplateGroupModel"
+import {promiseMap} from "../../api/common/utils/PromiseUtils"
+import {loadTemplateGroupInstance} from "../../templates/model/TemplateModel"
+
+export type KnowledgeBaseEntryInstance = {
+	group: TemplateGroupInstance;
+	entry: KnowledgeBaseEntry;
+}
 
 export const SELECT_NEXT_ENTRY = "next";
-export const SELECT_PREV_ENTRY = "previous";
 
 /**
  *   Model that holds main logic for the Knowdledgebase.
@@ -32,16 +37,12 @@ export class KnowledgeBaseModel {
 	_matchedKeywordsInContent: Array<?string>
 	_filterValue: string
 	+_eventController: EventController;
-	+_entityEventReceived: EntityEventsListener;
-	+_logins: LoginController;
 	+_entityClient: EntityClient;
-	_templateGroupRoot: ?TemplateGroupRoot
-	_templateGroupModel: TemplateGroupModel;
+	+_entityEventReceived: EntityEventsListener;
+	_entries: Array<KnowledgeBaseEntryInstance>
 
-
-	constructor(eventController: EventController, logins: LoginController, entityClient: EntityClient, templateGroupModel: TemplateGroupModel) {
+	constructor(eventController: EventController, entityClient: EntityClient, entries: Array<KnowledgeBaseEntryInstance>) {
 		this._eventController = eventController
-		this._logins = logins
 		this._entityClient = entityClient
 		this._allEntries = []
 		this._allKeywords = []
@@ -49,28 +50,18 @@ export class KnowledgeBaseModel {
 		this.filteredEntries = stream(this._allEntries)
 		this.selectedEntry = stream(null)
 		this._filterValue = ""
-		this._templateGroupModel = templateGroupModel
 		this._entityEventReceived = (updates) => {
 			return this._entityUpdate(updates)
 		}
 		this._eventController.addEntityListener(this._entityEventReceived)
+		this._entries = entries
+		this.initAllKeywords()
+		this.filteredEntries(this._allEntries)
+		this.selectedEntry(this.containsResult() ? this.filteredEntries()[0] : null)
 	}
 
-	init(): Promise<void> {
-		const allEntries = []
-		return this._templateGroupModel.init().then(templateGroupInstances => {
-			Promise.each(templateGroupInstances, templateGroupInstance => {
-				return this._entityClient.loadAll(KnowledgeBaseEntryTypeRef, templateGroupInstance.groupRoot.knowledgeBase)
-				           .then((entries) => {
-					           allEntries.push(...entries)
-				           })
-			}).then(() => {
-				this._allEntries = allEntries
-				this.initAllKeywords()
-				this.filteredEntries(this._allEntries)
-				this.selectedEntry(this.containsResult() ? this.filteredEntries()[0] : null)
-			})
-		})
+	getTemplateGroupInstances(): Array<TemplateGroupInstance> {
+		return this._entries.map(entry => entry.group)
 	}
 
 	initAllKeywords() {
@@ -210,3 +201,16 @@ export class KnowledgeBaseModel {
 	}
 }
 
+export function createKnowledgeBaseModel(eventController: EventController, logins: LoginController, entityClient: EntityClient): Promise<KnowledgeBaseModel> {
+	const templateMemberships = logins.getUserController().getTemplateMemberships()
+	const groupInstances = promiseMap(templateMemberships, membership => loadTemplateGroupInstance(membership, entityClient))
+	const entryInstances: Promise<Array<KnowledgeBaseEntryInstance>> =
+		promiseMap(groupInstances, group => entityClient.loadAll(KnowledgeBaseEntryTypeRef, group.groupRoot.knowledgeBase)
+		                                                .then(entries => entries.map(entry => ({group, entry}))))
+			.then(entries => entries.flat())
+
+	return entryInstances.then(entries =>
+		new KnowledgeBaseModel(eventController, entityClient, entries)
+	)
+
+}

@@ -10,16 +10,15 @@ import {OperationType} from "../../api/common/TutanotaConstants"
 import stream from "mithril/stream/stream.js"
 import type {EntityClient} from "../../api/common/EntityClient"
 import type {LoginController} from "../../api/main/LoginController"
-import {TemplateGroupModel} from "./TemplateGroupModel"
 import {getElementId, isSameId} from "../../api/common/utils/EntityUtils"
 import type {EmailTemplateContent} from "../../api/entities/tutanota/EmailTemplateContent"
-import {neverNull} from "../../api/common/utils/Utils"
-import type {TemplateGroupInstances} from "./TemplateGroupModel"
-import {LazyLoaded} from "../../api/common/utils/LazyLoaded"
-import {UserTypeRef} from "../../api/entities/sys/User"
-import {logins} from "../../api/main/LoginController"
-import m from "mithril"
 import type {GroupMembership} from "../../api/entities/sys/GroupMembership"
+import {promiseMap} from "../../api/common/utils/PromiseUtils"
+import {GroupInfoTypeRef} from "../../api/entities/sys/GroupInfo"
+import {TemplateGroupRootTypeRef} from "../../api/entities/tutanota/TemplateGroupRoot"
+import type {TemplateGroupRoot} from "../../api/entities/tutanota/TemplateGroupRoot"
+import {KnowledgeBaseEntryTypeRef} from "../../api/entities/tutanota/KnowledgeBaseEntry"
+import type {TemplateGroupInstance} from "./TemplateGroupModel"
 
 /**
  *   Model that holds main logic for the Template Feature.
@@ -43,14 +42,11 @@ export class TemplateModel {
 	+_entityEventReceived: EntityEventsListener;
 	+_logins: LoginController;
 	+_entityClient: EntityClient;
-	_templateGroupModel: TemplateGroupModel;
-	_templateMemberships: Array<GroupMembership>
+	_groupInstances: Array<TemplateGroupInstance>
 
 	_selectedContent: ?EmailTemplateContent
-	_initialized: LazyLoaded<TemplateModel>
 
-
-	constructor(eventController: EventController, logins: LoginController, entityClient: EntityClient, templateGroupModel: TemplateGroupModel) {
+	constructor(templates: Array<EmailTemplate>, groupInstances: Array<TemplateGroupInstance>, eventController: EventController, logins: LoginController, entityClient: EntityClient) {
 		this._eventController = eventController
 		this._logins = logins
 		this._entityClient = entityClient
@@ -58,44 +54,26 @@ export class TemplateModel {
 		this._searchResults = stream([])
 		this._selectedTemplate = null
 		this._hasLoaded = false
-		this._templateGroupModel = templateGroupModel
-		this._templateMemberships = []
 
 		this._entityEventReceived = (updates) => {
 			return this._entityUpdate(updates)
 		}
 
-		this._initialized = new LazyLoaded<TemplateModel>(() => {
-			return this._init().return(this)
-		})
+		this._allTemplates = templates
+		this._searchResults(this._allTemplates)
+		this.setSelectedTemplate(this.containsResult() ? this._searchResults()[0] : null)
+		// set selected content to content which includes client language or to first content of selected template
+		this._selectedContent = this._getContentWithClientLanguage()
+			? this._getContentWithClientLanguage()
+			: this._selectedTemplate ? this._selectedTemplate.contents[0] : null
+
+		this._eventController.addEntityListener(this._entityEventReceived)
+		this._groupInstances = groupInstances
 
 	}
 
-	getInitializedModel(): Promise<TemplateModel> {
-		return this._initialized.getAsync()
-	}
-
-	_init(): Promise<void> {
-		const allEmailTemplates = []
-		return this._templateGroupModel.init().then(templateGroupInstances => {
-			this._templateMemberships = templateGroupInstances.map(gi => gi.groupMembership)
-			return Promise.each(templateGroupInstances, templateGroupInstance => {
-				return this._entityClient.loadAll(EmailTemplateTypeRef, templateGroupInstance.groupRoot.templates)
-				           .then((templates) => {
-					           allEmailTemplates.push(...templates)
-				           })
-			}).then(() => {
-				this._allTemplates = allEmailTemplates
-				this._searchResults(this._allTemplates)
-				this.setSelectedTemplate(this.containsResult() ? this._searchResults()[0] : null)
-				// set selected content to content which includes client language or to first content of selected template
-				this._selectedContent = this._getContentWithClientLanguage()
-					? this._getContentWithClientLanguage()
-					: this._selectedTemplate ? this._selectedTemplate.contents[0] : null
-				this._hasLoaded = true
-				this._eventController.addEntityListener(this._entityEventReceived)
-			})
-		})
+	dispose() {
+		this._eventController.removeEntityListener(this._entityEventReceived)
 	}
 
 	containsResult(): boolean {
@@ -179,7 +157,7 @@ export class TemplateModel {
 		return this._allTemplates.find(template => template.tag === tag)
 	}
 
-	_entityUpdate(updates: $ReadOnlyArray<EntityUpdateData>): Promise<void> {
+	_entityUpdate(updates: $ReadOnlyArray<EntityUpdateData>): Promise<*> {
 		return Promise.each(updates, update => {
 			if (isUpdateForTypeRef(EmailTemplateTypeRef, update)) {
 				if (update.operation === OperationType.CREATE) {
@@ -200,17 +178,47 @@ export class TemplateModel {
 					findAndRemove(this._allTemplates, (t) => isSameId(getElementId(t), update.instanceId))
 					this._searchResults(this._allTemplates)
 				}
-			} else if (isUpdateForTypeRef(UserTypeRef, update) && isSameId(update.instanceId, logins.getUserController().user._id)) {
-				if (this._initialized.isLoaded()) {
-					if (this._templateMemberships.length !== this._logins.getUserController().getTemplateMemberships().length) {
-						this._eventController.removeEntityListener(this._entityEventReceived)
-						this._initialized.reset()
-						this._initialized.getAsync()
-					}
-				}
 			}
-		}).return()
+		})
+	}
+
+	getTemplateGroupInstances(): Array<TemplateGroupInstance> {
+		return this._groupInstances
 	}
 }
 
+/**
+ * Load all templates from all Template Groups to which the User belongs, then create a TemplateModel with them
+ * If a user is added to another TemplateGroup, this Model will not see, and a new one must be created
+ * @param eventController
+ * @param logins
+ * @param entityClient
+ * @param templateGroupModel
+ * @returns {Promise<*>|Promise<*|TemplateModel>|Promise<TemplateModel>}
+ */
+export function createTemplateModel(eventController: EventController,
+                                    logins: LoginController,
+                                    entityClient: EntityClient): Promise<TemplateModel> {
+	const templateMemberships = logins.getUserController().getTemplateMemberships()
+	return loadTemplateGroupInstances(templateMemberships, entityClient).then(templateGroupInstances => {
+		return promiseMap(templateGroupInstances, instance => instance.groupRoot)
+			.then(groupRoots => loadTemplates(groupRoots, entityClient)
+				.then(templates => new TemplateModel(templates, templateGroupInstances, eventController, logins, entityClient)))
+	})
+}
+
+export function loadTemplateGroupInstances(memberships: Array<GroupMembership>, entityClient: EntityClient): Promise<Array<TemplateGroupInstance>> {
+	return promiseMap(memberships, membership => loadTemplateGroupInstance(membership, entityClient))
+}
+
+export function loadTemplateGroupInstance(groupMembership: GroupMembership, entityClient: EntityClient): Promise<TemplateGroupInstance> {
+	return entityClient.load(GroupInfoTypeRef, groupMembership.groupInfo)
+	                   .then(groupInfo => entityClient.load(TemplateGroupRootTypeRef, groupInfo.group)
+	                                                  .then(groupRoot => ({groupInfo, groupRoot, groupMembership})))
+}
+
+function loadTemplates(templateGroups: Array<TemplateGroupRoot>, entityClient: EntityClient): Promise<Array<EmailTemplate>> {
+	return promiseMap(templateGroups, group => entityClient.loadAll(EmailTemplateTypeRef, group.templates))
+		.then(groupedTemplates => groupedTemplates.flat())
+}
 

@@ -6,8 +6,10 @@ import {Editor} from "../../gui/editor/Editor"
 import {KnowledgeBaseView} from "./KnowledgeBaseView"
 import {showTemplatePopupInEditor} from "../../templates/view/TemplatePopup"
 import {Dialog, DialogType} from "../../gui/base/Dialog"
+import type {TemplateModel} from "../../templates/model/TemplateModel"
 
-export function showKnowledgeBaseDialog(knowledgeBase: KnowledgeBaseModel, editor: Editor) {
+// TODO template model should be optional
+export function showKnowledgeBaseDialog(knowledgeBase: KnowledgeBaseModel, templateModel: TemplateModel, editor: Editor) {
 	let dialog
 	const resizeListener = () => dialog.close()
 
@@ -15,7 +17,7 @@ export function showKnowledgeBaseDialog(knowledgeBase: KnowledgeBaseModel, edito
 		view: () => {
 			return m(KnowledgeBaseView, {
 				onTemplateSelect: (template) => {
-					showTemplatePopupInEditor(editor, template, "")
+					showTemplatePopupInEditor(templateModel, editor, template, "")
 				},
 				model: knowledgeBase,
 				parentDialog: dialog
@@ -24,7 +26,7 @@ export function showKnowledgeBaseDialog(knowledgeBase: KnowledgeBaseModel, edito
 	}
 
 	// TODO this displays all effed up now
-	// maybe just modal something something
+	// maybe just do modal something something
 	dialog = new Dialog(DialogType.EditLarge, knowledgebaseComponent)
 
 	dialog.show()

@@ -6,7 +6,7 @@ import {Editor} from "../../gui/editor/Editor"
 import type {Attachment, Recipients, ResponseMailParameters} from "./SendMailModel"
 import {defaultSendMailModel, mailAddressToRecipient, SendMailModel} from "./SendMailModel"
 import {Dialog} from "../../gui/base/Dialog"
-import {getLanguage, lang, languageByCode} from "../../misc/LanguageViewModel"
+import {lang} from "../../misc/LanguageViewModel"
 import type {MailboxDetail} from "../model/MailModel"
 import {checkApprovalStatus} from "../../misc/LoginUtils"
 import {conversationTypeString, getEnabledMailAddressesWithUser, LINE_BREAK, parseMailtoUrl} from "../model/MailUtils"
@@ -55,8 +55,10 @@ import type {ButtonAttrs} from "../../gui/base/ButtonN"
 import {showTemplatePopupInEditor} from "../../templates/view/TemplatePopup"
 import {showAddTemplateGroupDialog} from "../../settings/AddGroupDialog"
 import {registerTemplateShortcutListener} from "../../templates/view/TemplateShortcutListener"
-import type {KnowledgeBaseModel} from "../../knowledgebase/model/KnowledgeBaseModel"
+import {createKnowledgeBaseModel, KnowledgeBaseModel} from "../../knowledgebase/model/KnowledgeBaseModel"
 import {showKnowledgeBaseDialog} from "../../knowledgebase/view/KnowledgeBaseDialog"
+import type {TemplateModel} from "../../templates/model/TemplateModel"
+import {createTemplateModel} from "../../templates/model/TemplateModel"
 
 export type MailEditorAttrs = {
 	model: SendMailModel,
@@ -69,10 +71,17 @@ export type MailEditorAttrs = {
 	selectedNotificationLanguage: Stream<string>,
 	inlineImages?: Promise<InlineImages>,
 	dialog: lazy<Dialog>,
-	knowledgeBase?: KnowledgeBaseModel
+	// TemplateModel should be a promise, because we don't want to wait for all the templates to have loaded before we can open an editor
+	knowledgeBase: ?Promise<KnowledgeBaseModel>,
+	templateModel: ?Promise<TemplateModel>,
 }
 
-export function createMailEditorAttrs(model: SendMailModel, doBlockExternalContent: boolean, doFocusEditorOnLoad: boolean, inlineImages?: Promise<InlineImages>, dialog: lazy<Dialog>, knowledgeBase?: KnowledgeBaseModel): MailEditorAttrs {
+export function createMailEditorAttrs(model: SendMailModel,
+                                      doBlockExternalContent: boolean,
+                                      doFocusEditorOnLoad: boolean, inlineImages?: Promise<InlineImages>,
+                                      dialog: lazy<Dialog>,
+                                      knowledgeBase: ?Promise<KnowledgeBaseModel>,
+                                      templateModel: ?Promise<TemplateModel>,): MailEditorAttrs {
 	return {
 		model,
 		body: stream(""),
@@ -82,7 +91,8 @@ export function createMailEditorAttrs(model: SendMailModel, doBlockExternalConte
 		selectedNotificationLanguage: stream(""),
 		inlineImages: inlineImages,
 		dialog,
-		knowledgeBase
+		knowledgeBase,
+		templateModel,
 	}
 }
 
@@ -95,6 +105,7 @@ export class MailEditor implements MComponent<MailEditorAttrs> {
 	mentionedInlineImages: Array<string>
 	inlineImageElements: Array<HTMLElement>
 	areTemplatesInitialized: boolean
+	templateModel: ?Promise<TemplateModel>
 
 	constructor(vnode: Vnode<MailEditorAttrs>) {
 
@@ -105,6 +116,7 @@ export class MailEditor implements MComponent<MailEditorAttrs> {
 		const a: MailEditorAttrs = vnode.attrs
 		const model = a.model
 
+		this.templateModel = a.templateModel || null
 		this.editor = new Editor(200, (html, isPaste) => {
 			const sanitized = htmlSanitizer.sanitizeFragment(html, {blockExternalContent: !isPaste && a.doBlockExternalContent()})
 			this.mentionedInlineImages = sanitized.inlineImageCids
@@ -130,10 +142,12 @@ export class MailEditor implements MComponent<MailEditorAttrs> {
 			// since the editor is the source for the body text, the model won't know if the body has changed unless we tell it
 			this.editor.addChangeListener(() => model.setBody(replaceInlineImagesWithCids(this.editor.getDOM()).innerHTML))
 
-			if (logins.getUserController().getTemplateMemberships().length > 0) {
-				// add this event listener to handle quick selection of templates inside the editor
-				registerTemplateShortcutListener(this.editor)
-				this.areTemplatesInitialized = true
+			if (a.templateModel) {
+				a.templateModel.then(templateModel => {
+					// add this event listener to handle quick selection of templates inside the editor
+					registerTemplateShortcutListener(this.editor, templateModel)
+					this.areTemplatesInitialized = true
+				})
 			}
 		})
 
@@ -153,7 +167,7 @@ export class MailEditor implements MComponent<MailEditorAttrs> {
 			label: () => "",
 			title: () => lang.get("openTemplatePopup_msg") + " (Ctrl + Space)",
 			click: () => {
-				this.openTemplates(this.editor)
+				this.openTemplates()
 			},
 			type: ButtonType.Toggle,
 			icon: () => Icons.ListAlt,
@@ -238,7 +252,7 @@ export class MailEditor implements MComponent<MailEditorAttrs> {
 		}
 
 		const shortcuts = [
-			{key: Keys.SPACE, ctrl: true, exec: () => this.openTemplates(this.editor), help: "templateOpen_label"},
+			{key: Keys.SPACE, ctrl: true, exec: () => this.openTemplates(), help: "templateOpen_label"},
 			// these are handled by squire
 			{key: Keys.B, ctrl: true, exec: noOp, help: "formatTextBold_msg"},
 			{key: Keys.I, ctrl: true, exec: noOp, help: "formatTextItalic_msg"},
@@ -250,7 +264,7 @@ export class MailEditor implements MComponent<MailEditorAttrs> {
 
 	view(vnode: Vnode<MailEditorAttrs>): Children {
 		const a = vnode.attrs
-		const model = a.model
+		const {model, templateModel} = a
 
 		a.body = () => this.editor.getHTML()
 
@@ -285,12 +299,12 @@ export class MailEditor implements MComponent<MailEditorAttrs> {
 		const knowledgebaseButtonAttrs = {
 			label: "openKnowledgebase_action",
 			click: () => {
-				const {knowledgeBase} = a
-				if (knowledgeBase) {
-					knowledgeBase.init().then(() => {
-						knowledgeBase.sortEntriesByMatchingKeywords(this.editor.getValue())
-						showKnowledgeBaseDialog(knowledgeBase, this.editor)
-					})
+				if (this.templateModel && a.knowledgeBase) {
+					Promise.all([this.templateModel, a.knowledgeBase])
+					       .then(([templateModel, knowledgeBase]) => {
+						       knowledgeBase.sortEntriesByMatchingKeywords(this.editor.getValue())
+						       showKnowledgeBaseDialog(knowledgeBase, templateModel, this.editor)
+					       })
 				}
 			},
 			icon: () => Icons.ListOrdered,
@@ -364,6 +378,7 @@ export class MailEditor implements MComponent<MailEditorAttrs> {
 			onremove: vnode => {
 				model.dispose()
 				this.objectUrls.forEach((url) => URL.revokeObjectURL(url))
+				if (this.templateModel) this.templateModel.then(templateModel => templateModel.dispose())
 			},
 			onclick: (e) => {
 				if (e.target === this.editor.getDOM()) {
@@ -430,16 +445,22 @@ export class MailEditor implements MComponent<MailEditorAttrs> {
 		])
 	}
 
-	openTemplates(editor: Editor) {
-		if (logins.getUserController().getTemplateMemberships().length > 0) {
-			if (!this.areTemplatesInitialized) {
-				// add this event listener to handle quick selection of templates inside the editor
-				registerTemplateShortcutListener(this.editor)
-				this.areTemplatesInitialized = true
-			}
-			showTemplatePopupInEditor(editor, null, editor.getSelectedText())
+	openTemplates() {
+		if (this.templateModel) {
+			this.templateModel.then(templateModel => {
+				if (!this.areTemplatesInitialized) {
+					// add this event listener to handle quick selection of templates inside the editor
+					registerTemplateShortcutListener(this.editor, templateModel)
+					this.areTemplatesInitialized = true
+				}
+				showTemplatePopupInEditor(templateModel, this.editor, null, this.editor.getSelectedText())
+			})
 		} else {
-			showAddTemplateGroupDialog()
+			showAddTemplateGroupDialog().then(didAddGroup => {
+				if (didAddGroup) {
+					this.templateModel = createTemplateModel(locator.eventController, logins, locator.entityClient)
+				}
+			})
 		}
 	}
 }
@@ -525,12 +546,21 @@ function createMailEditorDialog(model: SendMailModel, blockExternalContent: bool
 		}
 	}
 
+
+	const knowledgeBase = createKnowledgeBaseModel(locator.eventController, logins, locator.entityClient)
 	mailEditorAttrs = createMailEditorAttrs(model,
 		blockExternalContent,
 		model.toRecipients().length !== 0,
 		inlineImages,
 		() => dialog,
-		locator.knowledgeBase
+		// Dont make an empty template model or knowledge base model
+		// TODO createKnowledgeBaseModel should just take an instance of TemplateModel
+		logins.getUserController().getTemplateMemberships().length > 0
+			? createKnowledgeBaseModel(locator.eventController, logins, locator.entityClient)
+			: null,
+		logins.getUserController().getTemplateMemberships().length > 0
+			? createTemplateModel(locator.eventController, logins, locator.entityClient)
+			: null,
 	);
 
 	const shortcuts = [

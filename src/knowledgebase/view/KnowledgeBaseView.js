@@ -122,7 +122,7 @@ export class KnowledgeBaseView implements MComponent<KnowledgebaseViewAttrs> {
 						attrs.parentDialog.close()
 					},
 					type: ButtonType.Secondary,
-				}, this.createAddButtonAttributes())
+				}, this.createAddButtonAttributes(attrs))
 			case "entry":
 				const entry = knowledgebase.selectedEntry()
 				if (!entry) return null
@@ -224,8 +224,8 @@ export class KnowledgeBaseView implements MComponent<KnowledgebaseViewAttrs> {
 		this._pages(this._pages().slice(0, -1))
 	}
 
-	createAddButtonAttributes(): ButtonAttrs {
-		const templateGroupInstances = locator.templateGroupModel.getGroupInstances()
+	createAddButtonAttributes(a: KnowledgebaseViewAttrs): ButtonAttrs {
+		const templateGroupInstances = a.model.getTemplateGroupInstances()
 		if (templateGroupInstances.length === 1) {
 			return {
 				label: "addEntry_label",

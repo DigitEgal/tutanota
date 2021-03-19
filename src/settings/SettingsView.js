@@ -46,6 +46,8 @@ import {FolderExpander} from "../gui/base/FolderExpander"
 import {isSameId} from "../api/common/utils/EntityUtils";
 import {TemplateListView} from "./TemplateListView"
 import {KnowledgeBaseListView} from "./KnowledgeBaseListView"
+import {promiseMap} from "../api/common/utils/PromiseUtils"
+import {loadTemplateGroupInstance} from "../templates/model/TemplateModel"
 
 assertMainOrNode()
 
@@ -214,29 +216,31 @@ export class SettingsView implements CurrentView {
 	}
 
 	_createTemplateGroupExpander(): Promise<void> {
-		return locator.templateGroupModel.init().then(templateGroupInstances => {
-				this._templateGroupExpander = []
-				templateGroupInstances.forEach(templateGroupInstance => {
-					// Create Settingsfolder
-					const expanded = stream(true)
-					let templateGroupExpander: TemplateGroupExpander = {
-						groupID: templateGroupInstance.groupRoot._id,
-						groupName: templateGroupInstance.groupInfo.name,
-						expanded,
-						settingsFolder: []
-					}
-					templateGroupExpander.settingsFolder.push(
-						new SettingsFolder("template_label", () => Icons.Folder, "template-"
-							+ templateGroupInstance.groupInfo.name, () => new TemplateListView(this, locator.entityClient, templateGroupInstance.groupRoot)))
-					templateGroupExpander.settingsFolder.push(
-						new SettingsFolder("knowledgebase_label", () => Icons.Archive, "knowledgeBase-"
-							+ templateGroupInstance.groupInfo.name, () => new KnowledgeBaseListView(this, locator.entityClient, templateGroupInstance.groupRoot)))
-					this._templateGroupExpander.push(templateGroupExpander)
+		const templateMemberships = logins.getUserController().getTemplateMemberships()
+		return promiseMap(templateMemberships, membership => loadTemplateGroupInstance(membership, locator.entityClient))
+			.then(templateGroupInstances => {
+					this._templateGroupExpander = []
+					templateGroupInstances.forEach(templateGroupInstance => {
+						// Create Settingsfolder
+						const expanded = stream(true)
+						let templateGroupExpander: TemplateGroupExpander = {
+							groupID: templateGroupInstance.groupRoot._id,
+							groupName: templateGroupInstance.groupInfo.name,
+							expanded,
+							settingsFolder: []
+						}
+						templateGroupExpander.settingsFolder.push(
+							new SettingsFolder("template_label", () => Icons.Folder, "template-"
+								+ templateGroupInstance.groupInfo.name, () => new TemplateListView(this, locator.entityClient, templateGroupInstance.groupRoot)))
+						templateGroupExpander.settingsFolder.push(
+							new SettingsFolder("knowledgebase_label", () => Icons.Archive, "knowledgeBase-"
+								+ templateGroupInstance.groupInfo.name, () => new KnowledgeBaseListView(this, locator.entityClient, templateGroupInstance.groupRoot)))
+						this._templateGroupExpander.push(templateGroupExpander)
 
-				})
-				m.redraw()
-			}
-		)
+					})
+					m.redraw()
+				}
+			)
 	}
 
 	/**

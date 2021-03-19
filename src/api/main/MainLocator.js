@@ -14,9 +14,6 @@ import type {CalendarModel} from "../../calendar/model/CalendarModel"
 import {CalendarModelImpl} from "../../calendar/model/CalendarModel"
 import {defer} from "../common/utils/Utils"
 import {ProgressTracker} from "./ProgressTracker"
-import {TemplateModel} from "../../templates/model/TemplateModel"
-import {KnowledgeBaseModel} from "../../knowledgebase/model/KnowledgeBaseModel"
-import {TemplateGroupModel} from "../../templates/model/TemplateGroupModel"
 
 assertMainOrNode()
 
@@ -30,9 +27,6 @@ export type MainLocatorType = {|
 	contactModel: ContactModel;
 	entityClient: EntityClient;
 	progressTracker: ProgressTracker;
-	templateModel: TemplateModel;
-	knowledgeBase: KnowledgeBaseModel;
-	templateGroupModel: TemplateGroupModel;
 	initializedWorker: Promise<WorkerClient>
 |}
 
@@ -46,9 +40,6 @@ export const locator: MainLocatorType = ({
 		this.progressTracker = new ProgressTracker()
 		this.search = new SearchModel(worker)
 		this.entityClient = new EntityClient(worker)
-		this.templateGroupModel = new TemplateGroupModel(locator.eventController, logins, locator.entityClient)
-		this.templateModel = new TemplateModel(locator.eventController, logins, locator.entityClient, this.templateGroupModel)
-		this.knowledgeBase = new KnowledgeBaseModel(locator.eventController, logins, locator.entityClient, this.templateGroupModel)
 
 		this.mailModel = new MailModel(notifications, this.eventController, worker, this.entityClient)
 		this.calendarModel = new CalendarModelImpl(notifications, this.eventController, worker, logins, this.progressTracker,

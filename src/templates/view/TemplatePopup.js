@@ -39,7 +39,7 @@ export const TEMPLATE_LIST_ENTRY_WIDTH = 354;
  */
 
 
-export function showTemplatePopupInEditor(editor: Editor, template: ?EmailTemplate, highlightedText: string) {
+export function showTemplatePopupInEditor(templateModel: TemplateModel, editor: Editor, template: ?EmailTemplate, highlightedText: string) {
 	const initialSearchString = template ? TEMPLATE_SHORTCUT_PREFIX + template.tag : highlightedText
 	const cursorRect = editor.getCursorPosition()
 	const editorRect = editor.getDOM().getBoundingClientRect();
@@ -60,11 +60,9 @@ export function showTemplatePopupInEditor(editor: Editor, template: ?EmailTempla
 	} else {
 		rect = new DomRectReadOnlyPolyfilled(editorRect.left, cursorRect.bottom, popUpWidth, cursorRect.height);
 	}
-	locator.templateModel.getInitializedModel().then(() => {
-		const popup = new TemplatePopup(locator.templateModel, rect, onSelect, initialSearchString)
-		locator.templateModel.search(initialSearchString)
-		popup.show()
-	})
+	const popup = new TemplatePopup(templateModel, rect, onSelect, initialSearchString)
+	templateModel.search(initialSearchString)
+	popup.show()
 }
 
 export class TemplatePopup implements ModalComponent {
@@ -241,7 +239,7 @@ export class TemplatePopup implements ModalComponent {
 	}
 
 	_createAddButtonAttributes(): ButtonAttrs {
-		const templateGroupInstances = locator.templateGroupModel.getGroupInstances()
+		const templateGroupInstances = this._templateModel.getTemplateGroupInstances()
 		if (templateGroupInstances.length === 1) {
 			return {
 				label: "createTemplate_action",

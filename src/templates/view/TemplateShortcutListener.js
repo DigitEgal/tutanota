@@ -5,7 +5,6 @@ import {isKeyPressed} from "../../misc/KeyManager"
 import {downcast} from "../../api/common/utils/Utils"
 import {Keys} from "../../api/common/TutanotaConstants"
 import {TEMPLATE_SHORTCUT_PREFIX, TemplateModel} from "../model/TemplateModel"
-import {locator} from "../../api/main/MainLocator"
 import {lang, languageByCode, LanguageViewModel} from "../../misc/LanguageViewModel"
 import {ButtonType} from "../../gui/base/ButtonN"
 import {DropdownN} from "../../gui/base/DropdownN"
@@ -13,13 +12,11 @@ import {modal} from "../../gui/base/Modal"
 import {showTemplatePopupInEditor} from "./TemplatePopup"
 import {firstThrow} from "../../api/common/utils/ArrayUtils"
 
-export function registerTemplateShortcutListener(editor: Editor): Promise<TemplateShortcutListener> {
-	return locator.templateModel.getInitializedModel().then(() => {
-		const listener = new TemplateShortcutListener(editor, locator.templateModel, lang)
-		editor.addEventListener("keydown", (event) => listener.handleKeyDown(event))
-		editor.addEventListener("cursor", (event) => listener.handleCursorChange(event))
-		return listener
-	})
+export function registerTemplateShortcutListener(editor: Editor, templateModel: TemplateModel): TemplateShortcutListener {
+	const listener = new TemplateShortcutListener(editor, templateModel, lang)
+	editor.addEventListener("keydown", (event) => listener.handleKeyDown(event))
+	editor.addEventListener("cursor", (event) => listener.handleCursorChange(event))
+	return listener
 }
 
 
@@ -77,7 +74,7 @@ class TemplateShortcutListener {
 						this._editor.insertHTML(firstThrow(template.contents).text)
 					}
 				} else {
-					showTemplatePopupInEditor(this._editor, null, selectedText)
+					showTemplatePopupInEditor(this._templateModel, this._editor, null, selectedText)
 				}
 			}
 		}

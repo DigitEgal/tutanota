@@ -112,6 +112,7 @@ function addTemplateGroup(name: string): Promise<boolean> {
 		      .then(() => true)
 		      .catch(PreconditionFailedError, (e) => {
 			      if (e.data === BUSINESS_FEATURE_REQUIRED) {
+				      // TODO This isn't descriptive enough
 				      showBusinessFeatureRequiredDialog("businessFeatureRequiredGeneral_msg")
 			      } else {
 				      Dialog.error(() => e.message)
@@ -120,30 +121,41 @@ function addTemplateGroup(name: string): Promise<boolean> {
 		      }))
 }
 
-export function showAddTemplateGroupDialog() {
-	const addGroupOkAction = (dialog) => {
-		addTemplateGroup(nameField.value()).then(success => {
-			if (success) {
-				dialog.close()
-			}
-		})
-	}
+/**
+ * Resolves to true if the user added a template group
+ */
+export function showAddTemplateGroupDialog(): Promise<boolean> {
 
-	let nameField = new TextField("name_label")
-	let form = {
-		view: () => {
-			return [
-				m(".pt", lang.get("templateGroupRequired_msg")),
-				m(nameField),
-			]
+	return new Promise(resolve => {
+
+		const addGroupOkAction = (dialog) => {
+			addTemplateGroup(nameField.value()).then(success => {
+				if (success) {
+					dialog.close()
+					resolve(true)
+				}
+			})
 		}
-	}
 
-	Dialog.showActionDialog({
-		title: lang.get("addGroup_label"),
-		child: form,
-		validator: () => _validateAddGroupInput(GroupType.Template, nameField.value(), null),
-		okAction: addGroupOkAction
+		const cancelAction = () => resolve(false)
+
+		let nameField = new TextField("name_label")
+		let form = {
+			view: () => {
+				return [
+					m(".pt", lang.get("templateGroupRequired_msg")),
+					m(nameField),
+				]
+			}
+		}
+
+		Dialog.showActionDialog({
+			title: lang.get("addGroup_label"),
+			child: form,
+			validator: () => _validateAddGroupInput(GroupType.Template, nameField.value(), null),
+			okAction: addGroupOkAction,
+			cancelAction
+		})
 	})
 
 }

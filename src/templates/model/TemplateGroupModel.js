@@ -2,21 +2,21 @@
 
 import m from "mithril"
 import type {GroupInfo} from "../../api/entities/sys/GroupInfo"
+import {GroupInfoTypeRef} from "../../api/entities/sys/GroupInfo"
 import type {TemplateGroupRoot} from "../../api/entities/tutanota/TemplateGroupRoot"
+import {TemplateGroupRootTypeRef} from "../../api/entities/tutanota/TemplateGroupRoot"
+import type {EntityUpdateData} from "../../api/main/EventController"
 import {EventController, isUpdateForTypeRef} from "../../api/main/EventController"
 import type {LoginController} from "../../api/main/LoginController"
+import {logins} from "../../api/main/LoginController"
 import {EntityClient} from "../../api/common/EntityClient"
-import type {EntityUpdateData} from "../../api/main/EventController"
 import {LazyLoaded} from "../../api/common/utils/LazyLoaded"
 import type {GroupMembership} from "../../api/entities/sys/GroupMembership"
-import {GroupInfoTypeRef} from "../../api/entities/sys/GroupInfo"
-import {TemplateGroupRootTypeRef} from "../../api/entities/tutanota/TemplateGroupRoot"
 import {neverNull} from "../../api/common/utils/Utils"
 import {UserTypeRef} from "../../api/entities/sys/User"
 import {isSameId} from "../../api/common/utils/EntityUtils"
-import {logins} from "../../api/main/LoginController"
 
-export type TemplateGroupInstances = {
+export type TemplateGroupInstance = {
 	groupInfo: GroupInfo,
 	groupRoot: TemplateGroupRoot,
 	groupMembership: GroupMembership
@@ -27,7 +27,7 @@ export class TemplateGroupModel {
 	+_eventController: EventController;
 	+_logins: LoginController;
 	+_entityClient: EntityClient;
-	_groupInstances: LazyLoaded<Array<TemplateGroupInstances>>
+	_groupInstances: LazyLoaded<Array<TemplateGroupInstance>>
 
 	constructor(eventController: EventController, logins: LoginController, entityClient: EntityClient) {
 		this._eventController = eventController
@@ -44,7 +44,7 @@ export class TemplateGroupModel {
 		})
 	}
 
-	_loadGroupInstances(templateGroupMembership: GroupMembership): Promise<TemplateGroupInstances> {
+	_loadGroupInstances(templateGroupMembership: GroupMembership): Promise<TemplateGroupInstance> {
 		return this._entityClient.load(GroupInfoTypeRef, templateGroupMembership.groupInfo)
 		           .then(groupInfo => {
 			           return this._entityClient.load(TemplateGroupRootTypeRef, templateGroupMembership.group)
@@ -58,15 +58,11 @@ export class TemplateGroupModel {
 		           })
 	}
 
-	init(): Promise<Array<TemplateGroupInstances>> {
-		return this._groupInstances.getAsync();
-	}
-
-	getGroupInstances(): Array<TemplateGroupInstances> {
+	getGroupInstances(): Array<TemplateGroupInstance> {
 		return neverNull(this._groupInstances.getSync())
 	}
 
-	_entityEventsReceived(updates: $ReadOnlyArray<EntityUpdateData>): Promise<void> {
+	_entityEventsReceived(updates: $ReadOnlyArray<EntityUpdateData>): Promise<*> {
 		// const userController = logins.getUserController()
 		return Promise.each(updates, update => {
 			if (isUpdateForTypeRef(UserTypeRef, update) && isSameId(update.instanceId, logins.getUserController().user._id)) {
@@ -80,6 +76,7 @@ export class TemplateGroupModel {
 					}
 				}
 			}
-		}).return()
+		})
 	}
 }
+
