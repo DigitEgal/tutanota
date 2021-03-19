@@ -7,15 +7,15 @@ import {isSelectedPrefix} from "../gui/base/NavButtonN"
 assertMainOrNode()
 
 export class SettingsFolder {
-	nameTextId: TranslationKey;
+	name: TranslationKey | lazy<string>;
 	icon: lazyIcon;
 	path: string;
 	url: string; // can be changed from outside
 	viewerCreator: lazy<UpdatableSettingsViewer>;
 	_isVisibleHandler: lazy<boolean>;
 
-	constructor(nameTextId: TranslationKey, icon: lazyIcon, path: string, viewerCreator: lazy<UpdatableSettingsViewer>) {
-		this.nameTextId = nameTextId
+	constructor(name: TranslationKey | lazy<string>, icon: lazyIcon, path: string, viewerCreator: lazy<UpdatableSettingsViewer>) {
+		this.name = name
 		this.icon = icon
 		this.path = path
 		this.url = `/settings/${path}`

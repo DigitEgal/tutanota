@@ -16,7 +16,7 @@ import type {User} from "../api/entities/sys/User"
 import {UserTypeRef} from "../api/entities/sys/User"
 import {load} from "../api/main/Entity"
 import {Button} from "../gui/base/Button"
-import {ButtonColors} from "../gui/base/ButtonN"
+import {ButtonColors, ButtonN} from "../gui/base/ButtonN"
 import {logins} from "../api/main/LoginController"
 import {GroupListView} from "./GroupListView"
 import {ContactFormListView} from "./ContactFormListView"
@@ -47,7 +47,8 @@ import {isSameId} from "../api/common/utils/EntityUtils";
 import {TemplateListView} from "./TemplateListView"
 import {KnowledgeBaseListView} from "./KnowledgeBaseListView"
 import {promiseMap} from "../api/common/utils/PromiseUtils"
-import {loadTemplateGroupInstance} from "../templates/model/TemplateModel"
+import {loadTemplateGroupInstance, loadTemplateGroupInstances} from "../templates/model/TemplateModel"
+import type {ButtonAttrs} from "../gui/base/ButtonN"
 
 assertMainOrNode()
 
@@ -67,7 +68,8 @@ export class SettingsView implements CurrentView {
 	_settingsDetailsColumn: ViewColumn;
 	_userFolders: SettingsFolder[];
 	_adminFolders: SettingsFolder[];
-	_templateGroupExpander: Array<TemplateGroupExpander>;
+	_templateFolders: SettingsFolder[];
+	_knowledgeBaseFolders: SettingsFolder[];
 	_selectedFolder: SettingsFolder;
 	_currentViewer: ?UpdatableSettingsViewer;
 	detailsViewer: ?UpdatableSettingsViewer; // the component for the details column. can be set by settings views
@@ -116,13 +118,30 @@ export class SettingsView implements CurrentView {
 			}
 		}
 
-		this._templateGroupExpander = []
-		this._createTemplateGroupExpander()
+		const addTemplateGroupButtonAttrs: ButtonAttrs = {
+			label: () => "Add template group",
+			icon: () => Icons.Add,
+			click: () => console.log("boop (TODO)")
+		}
+
+		this._templateFolders = []
+		this._makeTemplateFolders().then(folders => {
+			this._templateFolders = folders
+			m.redraw()
+		})
+
+		this._knowledgeBaseFolders = []
+		this._makeKnowledgeBaseFolders().then(folders => {
+			this._knowledgeBaseFolders = folders
+			m.redraw()
+		})
 
 		this._selectedFolder = this._userFolders[0]
 
 		const userFolderExpanded = stream(true)
 		const adminFolderExpanded = stream(true)
+		const templateSectionExpanded = stream(false)
+		const knowledgeBaseSectionExpanded = stream(false)
 
 		this._settingsFoldersColumn = new ViewColumn({
 			view: () => m(FolderColumnView, {
@@ -133,19 +152,20 @@ export class SettingsView implements CurrentView {
 						expanded: userFolderExpanded
 					}, this._createFolderExpanderChildren(this._userFolders)),
 					logins.isUserLoggedIn() && logins.getUserController().isGlobalOrLocalAdmin()
-						? [
-							m(FolderExpander, {
-								label: "adminSettings_label",
-								expanded: adminFolderExpanded
-							}, this._createFolderExpanderChildren(this._adminFolders)),
-						]
+						? m(FolderExpander, {
+							label: "adminSettings_label",
+							expanded: adminFolderExpanded
+						}, this._createFolderExpanderChildren(this._adminFolders))
 						: null,
-					this._templateGroupExpander.map(templateGroupExpander => {
-						return m(FolderExpander, {
-							label: () => templateGroupExpander.groupName,
-							expanded: templateGroupExpander.expanded,
-						}, this._createFolderExpanderChildren(templateGroupExpander.settingsFolder))
-					}),
+					m(FolderExpander, {
+						label: "template_label",
+						expanded: templateSectionExpanded,
+						extraButton: addTemplateGroupButtonAttrs
+					}, this._createFolderExpanderChildren(this._templateFolders)),
+					m(FolderExpander, {
+						label: "knowledgebase_label",
+						expanded: knowledgeBaseSectionExpanded,
+					}, this._createFolderExpanderChildren(this._knowledgeBaseFolders)),
 					isTutanotaDomain() ? this._aboutThisSoftwareLink() : null,
 				]),
 				ariaLabel: "settings_label"
@@ -154,7 +174,7 @@ export class SettingsView implements CurrentView {
 
 		this._settingsColumn = new ViewColumn({
 			view: () => m(this._getCurrentViewer())
-		}, ColumnType.Background, 400, 600, () => lang.get(this._selectedFolder.nameTextId))
+		}, ColumnType.Background, 400, 600, () => lang.getMaybeLazy(this._selectedFolder.name))
 
 		this._settingsDetailsColumn = new ViewColumn({
 			view: () => (this.detailsViewer) ? m(this.detailsViewer) : m("")
@@ -185,7 +205,7 @@ export class SettingsView implements CurrentView {
 		).setColors(ButtonColors.Nav)
 		const buttons = folders.map(folder => {
 			return {
-				label: folder.nameTextId,
+				label: folder.name,
 				icon: folder.icon,
 				href: folder.url,
 				colors: ButtonColors.Nav,
@@ -194,7 +214,7 @@ export class SettingsView implements CurrentView {
 			}
 		})
 
-		return (".folders", buttons.map(fb => fb.isVisible()
+		return m(".folders", buttons.map(fb => fb.isVisible()
 			? m(".folder-row.flex-start.plr-l" + (isNavButtonSelected(fb) ? ".row-selected" : ""), [
 				m(NavButtonN, fb),
 				!isApp() && isNavButtonSelected(fb) && this._selectedFolder && m.route.get().startsWith('/settings/users')
@@ -204,7 +224,6 @@ export class SettingsView implements CurrentView {
 					: null
 			])
 			: null))
-
 	}
 
 	_getCurrentViewer(): Component {
@@ -215,34 +234,6 @@ export class SettingsView implements CurrentView {
 		return this._currentViewer
 	}
 
-	_createTemplateGroupExpander(): Promise<void> {
-		const templateMemberships = logins.getUserController().getTemplateMemberships()
-		return promiseMap(templateMemberships, membership => loadTemplateGroupInstance(membership, locator.entityClient))
-			.then(templateGroupInstances => {
-					this._templateGroupExpander = []
-					templateGroupInstances.forEach(templateGroupInstance => {
-						// Create Settingsfolder
-						const expanded = stream(true)
-						let templateGroupExpander: TemplateGroupExpander = {
-							groupID: templateGroupInstance.groupRoot._id,
-							groupName: templateGroupInstance.groupInfo.name,
-							expanded,
-							settingsFolder: []
-						}
-						templateGroupExpander.settingsFolder.push(
-							new SettingsFolder("template_label", () => Icons.Folder, "template-"
-								+ templateGroupInstance.groupInfo.name, () => new TemplateListView(this, locator.entityClient, templateGroupInstance.groupRoot)))
-						templateGroupExpander.settingsFolder.push(
-							new SettingsFolder("knowledgebase_label", () => Icons.Archive, "knowledgeBase-"
-								+ templateGroupInstance.groupInfo.name, () => new KnowledgeBaseListView(this, locator.entityClient, templateGroupInstance.groupRoot)))
-						this._templateGroupExpander.push(templateGroupExpander)
-
-					})
-					m.redraw()
-				}
-			)
-	}
-
 	/**
 	 * Notifies the current view about changes of the url within its scope.
 	 */
@@ -250,16 +241,7 @@ export class SettingsView implements CurrentView {
 		if (!args.folder) {
 			this._setUrl(this._userFolders[0].url)
 		} else if (args.folder || !m.route.get().startsWith("/settings")) { // ensure that current viewer will be reinitialized
-			let folder = this._userFolders.find(f => f.path === args.folder)
-			if (!folder && logins.getUserController().isGlobalOrLocalAdmin()) {
-				folder = this._adminFolders.find(f => f.path === args.folder)
-			}
-			if (!folder && logins.getUserController().getTemplateMemberships().length > 0) {
-				this._templateGroupExpander.find(templateGroupExpander => {
-					folder = templateGroupExpander.settingsFolder.find(f => f.path === args.folder)
-					return folder
-				})
-			}
+			const folder = this._allSettingsFolders().find(f => f.path === args.folder)
 			if (!folder) {
 				this._setUrl(this._userFolders[0].url)
 			} else if (this._selectedFolder.path === folder.path) {// folder path has not changed
@@ -275,6 +257,10 @@ export class SettingsView implements CurrentView {
 				m.redraw()
 			}
 		}
+	}
+
+	_allSettingsFolders(): $ReadOnlyArray<SettingsFolder> {
+		return [this._userFolders, this._adminFolders, this._templateFolders, this._knowledgeBaseFolders].flat()
 	}
 
 	_setUrl(url: string) {
@@ -300,17 +286,16 @@ export class SettingsView implements CurrentView {
 						&& this._adminFolders.find(f => f.isActive())) {
 						this._setUrl(this._userFolders[0].url)
 					}
-					// Check if template group memberships have changed
-					const existingTemplateGroupMemberships = this._templateGroupExpander.map(templateGroupExpander => templateGroupExpander.groupID)
-					const newTemplateGroupMemberships = logins.getUserController().getTemplateMemberships().map(membership => membership.group)
-					if (existingTemplateGroupMemberships.length !== newTemplateGroupMemberships.length) {
-						this._createTemplateGroupExpander()
-						    .then(() => {
-							    if (m.route.get().startsWith(SETTINGS_PREFIX)) {
-								    this._setUrl(m.route.get())
-								    m.redraw()
-							    }
-						    })
+					// template group memberships may have changed
+					if (this._templateFolders.length !== logins.getUserController().getTemplateMemberships().length) {
+						Promise.all([this._makeTemplateFolders(), this._makeKnowledgeBaseFolders()])
+						       .then(([templates, knowledgeBases]) => {
+							       this._templateFolders = templates
+							       this._knowledgeBaseFolders = knowledgeBases
+							       if (m.route.get().startsWith(SETTINGS_PREFIX)) {
+								       this._setUrl(m.route.get())
+							       }
+						       })
 					}
 					m.redraw()
 				})
@@ -361,5 +346,27 @@ export class SettingsView implements CurrentView {
 			)
 		])
 	}
+
+	_makeTemplateFolders(): Promise<Array<SettingsFolder>> {
+		const templateMemberships = logins.getUserController() && logins.getUserController().getTemplateMemberships() || []
+		return promiseMap(loadTemplateGroupInstances(templateMemberships, locator.entityClient),
+			groupInstance =>
+				new SettingsFolder(() => groupInstance.groupInfo.name,
+					() => Icons.Folder,
+					`template-${encodeURIComponent(groupInstance.groupInfo.name)}`,
+					() => new TemplateListView(this, locator.entityClient, groupInstance.groupRoot)))
+	}
+
+	_makeKnowledgeBaseFolders(): Promise<Array<SettingsFolder>> {
+		const templateMemberships = logins.getUserController() && logins.getUserController().getTemplateMemberships() || []
+		return promiseMap(loadTemplateGroupInstances(templateMemberships, locator.entityClient),
+			groupInstance =>
+				new SettingsFolder(() => groupInstance.groupInfo.name,
+					() => Icons.Folder,
+					`knowledgeBase-${encodeURIComponent(groupInstance.groupInfo.name)}`,
+					() => new KnowledgeBaseListView(this, locator.entityClient, groupInstance.groupRoot)))
+	}
+
+
 }
 
