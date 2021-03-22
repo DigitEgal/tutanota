@@ -42,6 +42,9 @@ export const allowedImports = {
 	"ui-extra": [
 		"polyfill-helpers", "common-min", "common", "boot", "gui-base", "main", "settings", "contacts", "sanitizer", "login", "mail-editor"
 	],
+	"sharing": [
+		"polyfill-helpers", "common-min", "common", "boot", "gui-base", "main"
+	],
 	"native-common": ["polyfill-helpers", "common-min", "common"],
 	"native-main": ["polyfill-helpers", "common-min", "common", "boot", "gui-base", "main", "native-common", "login"],
 	"native-worker": ["polyfill-helpers", "common-min", "common"],
@@ -100,7 +103,9 @@ export function getChunkName(moduleId, {getModuleInfo}) {
 	} else if (moduleId.includes("src/mail/editor") ||
 		moduleId.includes("squire") ||
 		moduleId.includes("src/gui/editor") ||
-		moduleId.includes("src/mail/signature")
+		moduleId.includes("src/mail/signature") ||
+		moduleId.includes("src/templates") ||
+		moduleId.includes("src/knowledgebase")
 	) {
 		// squire is most often used with mail editor and they are both not too big so we merge them
 		return "mail-editor"
@@ -142,10 +147,14 @@ export function getChunkName(moduleId, {getModuleInfo}) {
 		return "common"
 	} else if (moduleId.includes("rollupPluginBabelHelpers") || moduleId.includes("commonjsHelpers")) {
 		return "polyfill-helpers"
-	} else if (moduleId.includes("src/settings") || moduleId.includes("src/subscription") || moduleId.includes("libs/qrcode")) {
+	} else if (moduleId.includes("src/settings") ||
+		moduleId.includes("src/subscription") ||
+		moduleId.includes("libs/qrcode")) {
 		// subscription and settings depend on each other right now.
 		// subscription is also a kitchen sink with signup, utils and views, we should break it up
 		return "settings"
+	} else if (moduleId.includes("src/sharing")) {
+		return "sharing"
 	} else if (moduleId.includes("src/api/worker")) {
 		return "worker" // avoid that crypto stuff is only put into native
 	} else if (moduleId.includes("libs/jszip")) {

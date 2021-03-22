@@ -18,7 +18,7 @@ import {FileNotFoundError} from "../../api/common/error/FileNotFoundError"
 import {PreconditionFailedError} from "../../api/common/error/RestError"
 import type {DialogHeaderBarAttrs} from "../../gui/base/DialogHeaderBar"
 import {ButtonN, ButtonType} from "../../gui/base/ButtonN"
-import {attachDropdown, createDropdown, DropdownN} from "../../gui/base/DropdownN"
+import {attachDropdown, createDropdown} from "../../gui/base/DropdownN"
 import {fileController} from "../../file/FileController"
 import {RichTextToolbar} from "../../gui/base/RichTextToolbar"
 import {isApp, isBrowser, isDesktop} from "../../api/common/Env"
@@ -46,14 +46,13 @@ import type {Mail} from "../../api/entities/tutanota/Mail"
 import type {File as TutanotaFile} from "../../api/entities/tutanota/File"
 import type {InlineImages} from "../view/MailViewer"
 import {FileOpenError} from "../../api/common/error/FileOpenError"
-import {downcast, noOp, defer} from "../../api/common/utils/Utils"
+import {downcast, noOp} from "../../api/common/utils/Utils"
 import {showUserError} from "../../misc/ErrorHandlerImpl"
 import {createInlineImage, replaceCidsWithInlineImages, replaceInlineImagesWithCids} from "../view/MailGuiUtils";
 import {client} from "../../misc/ClientDetector"
 import {appendEmailSignature} from "../signature/Signature"
 import type {ButtonAttrs} from "../../gui/base/ButtonN"
 import {showTemplatePopupInEditor} from "../../templates/view/TemplatePopup"
-import {showAddTemplateGroupDialog} from "../../settings/AddGroupDialog"
 import {registerTemplateShortcutListener} from "../../templates/view/TemplateShortcutListener"
 import {createKnowledgeBaseModel, KnowledgeBaseModel} from "../../knowledgebase/model/KnowledgeBaseModel"
 import {showKnowledgeBaseDialog} from "../../knowledgebase/view/KnowledgeBaseDialog"
@@ -456,10 +455,12 @@ export class MailEditor implements MComponent<MailEditorAttrs> {
 				showTemplatePopupInEditor(templateModel, this.editor, null, this.editor.getSelectedText())
 			})
 		} else {
-			showAddTemplateGroupDialog("templateGroupRequired_msg").then(didAddGroup => {
-				if (didAddGroup) {
-					this.templateModel = createTemplateModel(locator.eventController, logins, locator.entityClient)
-				}
+			import("../../settings/AddGroupDialog.js").then(({showAddTemplateGroupDialog}) => {
+				showAddTemplateGroupDialog("templateGroupRequired_msg").then(didAddGroup => {
+					if (didAddGroup) {
+						this.templateModel = createTemplateModel(locator.eventController, logins, locator.entityClient)
+					}
+				})
 			})
 		}
 	}

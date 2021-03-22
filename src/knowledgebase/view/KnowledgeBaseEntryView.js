@@ -23,7 +23,7 @@ export class KnowledgeBaseEntryView implements MComponent<KnowledgeBaseEntryView
 	constructor() {
 		this._sanitizedEntry = memoized((entry) => {
 			return {
-				content: htmlSanitizer.sanitize(entry.description, true).text,
+				content: htmlSanitizer.sanitize(entry.description, {blockExternalContent: true}).text,
 			}
 		})
 	}
