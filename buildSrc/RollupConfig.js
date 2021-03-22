@@ -26,18 +26,18 @@ export const allowedImports = {
 	"main": ["polyfill-helpers", "common-min", "common", "boot", "gui-base"],
 	"urlifier": ["polyfill-helpers", "common-min", "common", "boot"],
 	"sanitizer": ["polyfill-helpers", "common-min", "common", "boot", "gui-base"],
-	"date": ["polyfill-helpers", "common-min", "common", "boot", "gui-base", "main"],
+	"date": ["polyfill-helpers", "common-min", "common", "boot", "gui-base", "main", "sharing"],
 	"mail-view": ["polyfill-helpers", "common-min", "common", "boot", "gui-base", "main"],
 	"mail-editor": ["polyfill-helpers", "common-min", "common", "boot", "gui-base", "main", "mail-view", "sanitizer"],
 	"search": ["polyfill-helpers", "common-min", "common", "boot", "gui-base", "main", "mail-view", "contacts", "date"],
 	// ContactMergeView needs HtmlEditor even though ContactEditor doesn't?
 	"contacts": ["polyfill-helpers", "common-min", "common", "boot", "gui-base", "main", "mail-view", "date", "mail-editor"],
-	"calendar-view": ["polyfill-helpers", "common-min", "common", "boot", "gui-base", "main", "date"],
+	"calendar-view": ["polyfill-helpers", "common-min", "common", "boot", "gui-base", "main", "date", "sharing"],
 	"login": ["polyfill-helpers", "common-min", "common", "boot", "gui-base", "main",],
 	"worker": ["polyfill-helpers", "common-min", "common", "native-common", "native-worker"],
 	"settings": [
 		"polyfill-helpers", "common-min", "common", "boot", "gui-base", "main", "contacts", "sanitizer", "mail-editor", "mail-view", "date",
-		"login"
+		"login", "sharing"
 	],
 	"ui-extra": [
 		"polyfill-helpers", "common-min", "common", "boot", "gui-base", "main", "settings", "contacts", "sanitizer", "login", "mail-editor"

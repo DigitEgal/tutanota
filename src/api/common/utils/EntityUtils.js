@@ -109,6 +109,10 @@ export type ListElement = {
 	_id: IdTuple
 }
 
+export function getId(entity: Element): Id | IdTuple {
+	return entity._id
+}
+
 export function getEtId(entity: Element): Id {
 	return entity._id
 }

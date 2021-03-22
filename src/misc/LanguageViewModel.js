@@ -390,7 +390,7 @@ export class LanguageViewModel {
 	/**
 	 * @throws An error if there is no translation for the given id.
 	 */
-	get(id: TranslationKey, params: ?Object): string {
+	get(id: TranslationKey, replacements: ?Object): string {
 		if (id == null) {
 			return ""
 		}
@@ -409,11 +409,11 @@ export class LanguageViewModel {
 				}
 			}
 		}
-		if (params instanceof Object) {
-			for (var param in params) {
-				text = text.replace(param, params[param])
-			}
+
+		for (var param in replacements) {
+			text = text.replace(param, replacements[param])
 		}
+
 		return text
 	}
 

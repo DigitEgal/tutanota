@@ -50,6 +50,13 @@ import {promiseMap} from "../api/common/utils/PromiseUtils"
 import {loadTemplateGroupInstances} from "../templates/model/TemplateModel"
 import type {ButtonAttrs} from "../gui/base/ButtonN"
 import {showAddTemplateGroupDialog} from "./AddGroupDialog"
+import type {ReceivedGroupInvitation} from "../api/entities/sys/ReceivedGroupInvitation"
+import {createReceivedGroupInvitation} from "../api/entities/sys/ReceivedGroupInvitation"
+import type {NavButtonAttrs} from "../gui/base/NavButtonN"
+import {downcast} from "../api/common/utils/Utils"
+import {getDisplayText} from "../mail/model/MailUtils"
+import {showGroupInvitationDialog} from "../sharing/view/GroupInvitationDialog"
+import {getCapabilityText} from "../sharing/GroupUtils"
 
 assertMainOrNode()
 

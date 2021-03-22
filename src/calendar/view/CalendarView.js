@@ -19,7 +19,15 @@ import {logins} from "../../api/main/LoginController"
 import {_loadReverseRangeBetween, HttpMethod} from "../../api/common/EntityFunctions"
 import type {EntityUpdateData} from "../../api/main/EventController"
 import {isUpdateForTypeRef} from "../../api/main/EventController"
-import {defaultCalendarColor, Keys, OperationType, reverse, ShareCapability, TimeFormat} from "../../api/common/TutanotaConstants"
+import {
+	defaultCalendarColor,
+	GroupType,
+	Keys,
+	OperationType,
+	reverse,
+	ShareCapability,
+	TimeFormat
+} from "../../api/common/TutanotaConstants"
 import {locator} from "../../api/main/MainLocator"
 import {downcast, freezeMap, memoized, neverNull, noOp} from "../../api/common/utils/Utils"
 import type {CalendarMonthTimeRange} from "../CalendarUtils"
@@ -28,15 +36,12 @@ import {
 	addDaysForLongEvent,
 	addDaysForRecurringEvent,
 	DEFAULT_HOUR_OF_DAY,
-	getCalendarName,
-	getCapabilityText,
 	getEventStart,
 	getMonth,
 	getNextHalfHour,
 	getStartOfTheWeekOffset,
 	getStartOfWeek,
 	getTimeZone,
-	hasCapabilityOnGroup,
 	isSameEvent,
 	shouldDefaultToAmPmTimeFormat,
 } from "../CalendarUtils"
@@ -67,7 +72,6 @@ import {styles} from "../../gui/styles"
 import {CalendarWeekView} from "./CalendarWeekView"
 import {Dialog} from "../../gui/base/Dialog"
 import {isApp} from "../../api/common/Env"
-import {showCalendarSharingDialog} from "./CalendarSharingDialog"
 import type {ReceivedGroupInvitation} from "../../api/entities/sys/ReceivedGroupInvitation"
 import {ReceivedGroupInvitationTypeRef} from "../../api/entities/sys/ReceivedGroupInvitation"
 import type {Group} from "../../api/entities/sys/Group"
@@ -75,8 +79,6 @@ import type {UserSettingsGroupRoot} from "../../api/entities/tutanota/UserSettin
 import {UserSettingsGroupRootTypeRef} from "../../api/entities/tutanota/UserSettingsGroupRoot"
 import {getDisplayText} from "../../mail/model/MailUtils"
 import {UserGroupRootTypeRef} from "../../api/entities/sys/UserGroupRoot"
-import {showInvitationDialog} from "./CalendarInvitationDialog"
-import {loadGroupMembers} from "./CalendarSharingUtils"
 import {size} from "../../gui/size"
 import {FolderColumnView} from "../../gui/base/FolderColumnView"
 import {deviceConfig} from "../../misc/DeviceConfig"
@@ -87,6 +89,10 @@ import {getListId, isSameId, listIdPart} from "../../api/common/utils/EntityUtil
 import {exportCalendar, showCalendarImportDialog} from "../export/CalendarImporterDialog"
 import {createCalendarEventViewModel} from "../CalendarEventViewModel"
 import {showNotAvailableForFreeDialog} from "../../misc/SubscriptionDialogs"
+import {loadGroupMembers} from "../../sharing/GroupSharingUtils"
+import {showGroupInvitationDialog} from "../../sharing/view/GroupInvitationDialog"
+import {getGroupName, getCapabilityText, hasCapabilityOnGroup} from "../../sharing/GroupUtils"
+import {showGroupSharingDialog} from "../../sharing/view/GroupSharingDialog"
 
 export const LIMIT_PAST_EVENTS_YEARS = 100
 
@@ -511,7 +517,7 @@ export class CalendarView implements CurrentView {
 					           ]),
 					           m(ButtonN, {
 						           label: "show_action",
-						           click: () => showInvitationDialog(invitation),
+						           click: () => showGroupInvitationDialog(invitation),
 						           icon: () => Icons.Eye
 					           })
 				           ])
@@ -550,7 +556,7 @@ export class CalendarView implements CurrentView {
 									     "cursor": "pointer",
 								     }
 							     }),
-							     m(".pl-m.b.flex-grow.text-ellipsis", {style: {width: 0}}, getCalendarName(calendarInfo.groupInfo, shared))
+							     m(".pl-m.b.flex-grow.text-ellipsis", {style: {width: 0}}, getGroupName(calendarInfo.groupInfo, shared, lang.get("privateCalendar_label")))
 						     ]),
 						     this._createCalendarActionDropdown(calendarInfo, colorValue, existingGroupSettings, userSettingsGroupRoot, shared)
 					     ])
@@ -583,7 +589,7 @@ export class CalendarView implements CurrentView {
 						if (logins.getUserController().isFreeAccount()) {
 							showNotAvailableForFreeDialog(false)
 						} else {
-							showCalendarSharingDialog(groupInfo, sharedCalendar)
+							showGroupSharingDialog(groupInfo, sharedCalendar)
 						}
 					},
 					type: ButtonType.Dropdown,
@@ -594,7 +600,7 @@ export class CalendarView implements CurrentView {
 						label: "import_action",
 						icon: () => Icons.Import,
 						click: () => showCalendarImportDialog(groupRoot),
-						isVisible: () => hasCapabilityOnGroup(logins.getUserController().user, group, ShareCapability.Write),
+						isVisible: () => group.type === GroupType.Calendar && hasCapabilityOnGroup(logins.getUserController().user, group, ShareCapability.Write),
 						type: ButtonType.Dropdown,
 					},
 				isApp()
@@ -605,9 +611,9 @@ export class CalendarView implements CurrentView {
 						click: () => {
 							const alarmInfoList = logins.getUserController().user.alarmInfoList
 							alarmInfoList
-							&& exportCalendar(getCalendarName(groupInfo, sharedCalendar), groupRoot, alarmInfoList.alarms, new Date(), getTimeZone())
+							&& exportCalendar(getGroupName(groupInfo, sharedCalendar), groupRoot, alarmInfoList.alarms, new Date(), getTimeZone())
 						},
-						isVisible: () => hasCapabilityOnGroup(logins.getUserController().user, group, ShareCapability.Read),
+						isVisible: () => group.type === GroupType.Calendar && hasCapabilityOnGroup(logins.getUserController().user, group, ShareCapability.Read),
 						type: ButtonType.Dropdown,
 					},
 				{
@@ -622,7 +628,7 @@ export class CalendarView implements CurrentView {
 	}
 
 	_confirmDeleteCalendar(calendarInfo: CalendarInfo) {
-		const calendarName = getCalendarName(calendarInfo.groupInfo, false)
+		const calendarName = getGroupName(calendarInfo.groupInfo, false)
 		loadGroupMembers(calendarInfo.group).then(members => {
 			const ownerMail = logins.getUserController().userGroupInfo.mailAddress
 			const otherMembers = members.filter(member => member.info.mailAddress !== ownerMail)
@@ -644,7 +650,7 @@ export class CalendarView implements CurrentView {
 
 	_onPressedEditCalendar(groupInfo: GroupInfo, colorValue: string, existingGroupSettings: ?GroupSettings, userSettingsGroupRoot: UserSettingsGroupRoot, shared: boolean) {
 		showEditCalendarDialog({
-			name: getCalendarName(groupInfo, shared),
+			name: getGroupName(groupInfo, shared),
 			color: colorValue.substring(1),
 
 		}, "edit_action", shared, (dialog, properties) => {

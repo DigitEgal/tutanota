@@ -31,7 +31,6 @@ import {
 	getStartOfDayWithZone,
 	getStartOfNextDayWithZone,
 	getTimeZone,
-	hasCapabilityOnGroup,
 	incrementByRepeatPeriod,
 	incrementSequence,
 	timeString,
@@ -62,6 +61,7 @@ import {EntityClient} from "../api/common/EntityClient"
 import {BusinessFeatureRequiredError} from "../api/main/BusinessFeatureRequiredError"
 import {parseTime, timeStringFromParts} from "../misc/Formatter"
 import type {Customer} from "../api/entities/sys/Customer"
+import {hasCapabilityOnGroup} from "../sharing/GroupUtils"
 
 const TIMESTAMP_ZERO_YEAR = 1970
 

@@ -1,6 +1,5 @@
 //@flow
 import {worker} from "../../api/main/WorkerClient"
-import {sendAcceptNotificationEmail, sendRejectNotificationEmail} from "./CalendarSharingUtils"
 import {getDisplayText} from "../../mail/model/MailUtils"
 import {logins} from "../../api/main/LoginController"
 import {createGroupSettings} from "../../api/entities/tutanota/GroupSettings"
@@ -9,15 +8,16 @@ import m from "mithril"
 import {lang} from "../../misc/LanguageViewModel"
 import {TextFieldN} from "../../gui/base/TextFieldN"
 import stream from "mithril/stream/stream.js"
-import {getCapabilityText} from "../CalendarUtils"
 import {downcast} from "../../api/common/utils/Utils"
 import {Dialog} from "../../gui/base/Dialog"
 import {ButtonN, ButtonType} from "../../gui/base/ButtonN"
 import type {ReceivedGroupInvitation} from "../../api/entities/sys/ReceivedGroupInvitation"
 import {isSameId} from "../../api/common/utils/EntityUtils"
+import {sendAcceptNotificationEmail, sendRejectNotificationEmail} from "../GroupSharingUtils"
+import {getCapabilityText} from "../GroupUtils"
 
 
-export function showInvitationDialog(invitation: ReceivedGroupInvitation) {
+export function showGroupInvitationDialog(invitation: ReceivedGroupInvitation) {
 	const userSettingsGroupRoot = logins.getUserController().userSettingsGroupRoot
 	const existingGroupSettings = userSettingsGroupRoot.groupSettings.find((gc) => gc.group === invitation.sharedGroup)
 	const color = existingGroupSettings ? existingGroupSettings.color : Math.random().toString(16).slice(-6)

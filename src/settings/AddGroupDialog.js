@@ -112,7 +112,6 @@ function addTemplateGroup(name: string): Promise<boolean> {
 		      .then(() => true)
 		      .catch(PreconditionFailedError, (e) => {
 			      if (e.data === BUSINESS_FEATURE_REQUIRED) {
-				      // TODO This isn't descriptive enough
 				      showBusinessFeatureRequiredDialog("businessFeatureRequiredGeneral_msg")
 			      } else {
 				      Dialog.error(() => e.message)
