@@ -1360,8 +1360,7 @@ export default {
 		"tooManyCustomDomains_msg": "Too many custom domains. Only one domain is allowed when deactivating the business feature.",
 		"featureRequiredForBusinessUse_msg": "This feature is required for business use.",
 		"deleteTemplateGroups_msg": "Please remove all template groups before deactivating the business feature.",
-		"openTemplatePopup_msg": "Open templates popup"
-
-
+		"openTemplatePopup_msg": "Open templates popup",
+		"createTemplateGroup_msg": "Create a new template group."
 	}
 }

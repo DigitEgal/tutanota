@@ -456,7 +456,7 @@ export class MailEditor implements MComponent<MailEditorAttrs> {
 				showTemplatePopupInEditor(templateModel, this.editor, null, this.editor.getSelectedText())
 			})
 		} else {
-			showAddTemplateGroupDialog().then(didAddGroup => {
+			showAddTemplateGroupDialog("templateGroupRequired_msg").then(didAddGroup => {
 				if (didAddGroup) {
 					this.templateModel = createTemplateModel(locator.eventController, logins, locator.entityClient)
 				}

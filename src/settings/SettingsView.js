@@ -49,6 +49,7 @@ import {KnowledgeBaseListView} from "./KnowledgeBaseListView"
 import {promiseMap} from "../api/common/utils/PromiseUtils"
 import {loadTemplateGroupInstance, loadTemplateGroupInstances} from "../templates/model/TemplateModel"
 import type {ButtonAttrs} from "../gui/base/ButtonN"
+import {showAddTemplateGroupDialog} from "./AddGroupDialog"
 
 assertMainOrNode()
 
@@ -118,11 +119,6 @@ export class SettingsView implements CurrentView {
 			}
 		}
 
-		const addTemplateGroupButtonAttrs: ButtonAttrs = {
-			label: () => "Add template group",
-			icon: () => Icons.Add,
-			click: () => console.log("boop (TODO)")
-		}
 
 		this._templateFolders = []
 		this._makeTemplateFolders().then(folders => {
@@ -142,37 +138,51 @@ export class SettingsView implements CurrentView {
 		const adminFolderExpanded = stream(true)
 		const templateSectionExpanded = stream(false)
 		const knowledgeBaseSectionExpanded = stream(false)
-		
-		this._settingsFoldersColumn = new ViewColumn({
-			view: () => m(FolderColumnView, {
-				button: null,
-				content: m(".flex.flex-grow.col", [
-					m(FolderExpander, {
-						label: "userSettings_label",
-						expanded: userFolderExpanded
-					}, this._createFolderExpanderChildren(this._userFolders)),
-					logins.isUserLoggedIn() && logins.getUserController().isGlobalOrLocalAdmin()
-						? m(FolderExpander, {
-							label: "adminSettings_label",
-							expanded: adminFolderExpanded
-						}, this._createFolderExpanderChildren(this._adminFolders))
-						: null,
-					m(FolderExpander, {
-						label: "template_label",
-						expanded: templateSectionExpanded,
-						extraButton: addTemplateGroupButtonAttrs,
-						enabled: this._templateFolders.length > 0
-					}, this._createFolderExpanderChildren(this._templateFolders)),
-					this._templateFolders.length > 0
-						? m(FolderExpander, {
-							label: "knowledgebase_label",
-							expanded: knowledgeBaseSectionExpanded,
-						}, this._createFolderExpanderChildren(this._knowledgeBaseFolders))
-						: null,
-					isTutanotaDomain() ? this._aboutThisSoftwareLink() : null,
-				]),
-				ariaLabel: "settings_label"
+
+		const addTemplateGroupButtonAttrs: ButtonAttrs = {
+			label: () => "Add template group",
+			icon: () => Icons.Add,
+			click: () => showAddTemplateGroupDialog().then(didAdd => {
+				if (didAdd) {
+					templateSectionExpanded(true)
+					knowledgeBaseSectionExpanded(true)
+				}
 			})
+		}
+
+		this._settingsFoldersColumn = new ViewColumn({
+			view: () => {
+				const hasTemplates = this._templateFolders.length > 0
+				return m(FolderColumnView, {
+					button: null,
+					content: m(".flex.flex-grow.col", [
+						m(FolderExpander, {
+							label: "userSettings_label",
+							expanded: userFolderExpanded
+						}, this._createFolderExpanderChildren(this._userFolders)),
+						logins.isUserLoggedIn() && logins.getUserController().isGlobalOrLocalAdmin()
+							? m(FolderExpander, {
+								label: "adminSettings_label",
+								expanded: adminFolderExpanded
+							}, this._createFolderExpanderChildren(this._adminFolders))
+							: null,
+						m(FolderExpander, {
+							label: "template_label",
+							expanded: templateSectionExpanded,
+							extraButton: addTemplateGroupButtonAttrs,
+							enabled: hasTemplates
+						}, this._createFolderExpanderChildren(this._templateFolders)),
+						hasTemplates
+							? m(FolderExpander, {
+								label: "knowledgebase_label",
+								expanded: knowledgeBaseSectionExpanded,
+							}, this._createFolderExpanderChildren(this._knowledgeBaseFolders))
+							: null,
+						isTutanotaDomain() ? this._aboutThisSoftwareLink() : null,
+					]),
+					ariaLabel: "settings_label"
+				})
+			}
 		}, ColumnType.Foreground, size.first_col_min_width, size.first_col_max_width, () => lang.get("settings_label"))
 
 		this._settingsColumn = new ViewColumn({
@@ -201,7 +211,11 @@ export class SettingsView implements CurrentView {
 		this._customDomains.getAsync().then(() => m.redraw())
 	}
 
-	_createFolderExpanderChildren(folders: SettingsFolder[]): Children {
+	_createFolderExpanderChildren(folders
+		                              :
+		                              SettingsFolder[]
+	):
+		Children {
 		let importUsersButton = new Button('importUsers_action',
 			() => showUserImportDialog(this._customDomains.getLoaded()),
 			() => Icons.ContactImport
@@ -229,7 +243,9 @@ export class SettingsView implements CurrentView {
 			: null))
 	}
 
-	_getCurrentViewer(): Component {
+	_getCurrentViewer()
+		:
+		Component {
 		if (!this._currentViewer) {
 			this.detailsViewer = null
 			this._currentViewer = this._selectedFolder.viewerCreator()
@@ -240,7 +256,10 @@ export class SettingsView implements CurrentView {
 	/**
 	 * Notifies the current view about changes of the url within its scope.
 	 */
-	updateUrl(args: Object) {
+	updateUrl(args
+		          :
+		          Object
+	) {
 		if (!args.folder) {
 			this._setUrl(this._userFolders[0].url)
 		} else if (args.folder || !m.route.get().startsWith("/settings")) { // ensure that current viewer will be reinitialized
@@ -262,16 +281,25 @@ export class SettingsView implements CurrentView {
 		}
 	}
 
-	_allSettingsFolders(): $ReadOnlyArray<SettingsFolder> {
+	_allSettingsFolders()
+		:
+		$ReadOnlyArray<SettingsFolder> {
 		return [this._userFolders, this._adminFolders, this._templateFolders, this._knowledgeBaseFolders].flat()
 	}
 
-	_setUrl(url: string) {
+	_setUrl(url
+		        :
+		        string
+	) {
 		navButtonRoutes.settingsUrl = url
 		m.route.set(url + location.hash)
 	}
 
-	_isGlobalOrLocalAdmin(user: User): boolean {
+	_isGlobalOrLocalAdmin(user
+		                      :
+		                      User
+	):
+		boolean {
 		return user.memberships.find(m => m.groupType === GroupType.Admin || m.groupType === GroupType.LocalAdmin)
 			!= null
 	}
@@ -280,7 +308,11 @@ export class SettingsView implements CurrentView {
 		this.viewSlider.focus(this._settingsDetailsColumn)
 	}
 
-	entityEventsReceived<T>(updates: $ReadOnlyArray<EntityUpdateData>): Promise<void> {
+	entityEventsReceived<T>(updates
+		                        :
+		                        $ReadOnlyArray<EntityUpdateData>
+	):
+		Promise<void> {
 		return Promise.each(updates, update => {
 			if (isUpdateForTypeRef(UserTypeRef, update) && isSameId(update.instanceId, logins.getUserController().user._id)) {
 				return load(UserTypeRef, update.instanceId).then(user => {
@@ -317,11 +349,15 @@ export class SettingsView implements CurrentView {
 		})
 	}
 
-	getViewSlider(): ?IViewSlider {
+	getViewSlider()
+		:
+	? IViewSlider {
 		return this.viewSlider
 	}
 
-	_aboutThisSoftwareLink(): Vnode<any> {
+	_aboutThisSoftwareLink()
+		:
+		Vnode<any> {
 		return m(".pb.pt-l.flex-no-shrink.flex.col.justify-end", [
 			m("button.text-center.small.no-text-decoration", {
 					style: {
@@ -350,7 +386,9 @@ export class SettingsView implements CurrentView {
 		])
 	}
 
-	_makeTemplateFolders(): Promise<Array<SettingsFolder>> {
+	_makeTemplateFolders()
+		:
+		Promise<Array<SettingsFolder>> {
 		const templateMemberships = logins.getUserController() && logins.getUserController().getTemplateMemberships() || []
 		return promiseMap(loadTemplateGroupInstances(templateMemberships, locator.entityClient),
 			groupInstance =>
@@ -360,7 +398,9 @@ export class SettingsView implements CurrentView {
 					() => new TemplateListView(this, locator.entityClient, groupInstance.groupRoot)))
 	}
 
-	_makeKnowledgeBaseFolders(): Promise<Array<SettingsFolder>> {
+	_makeKnowledgeBaseFolders()
+		:
+		Promise<Array<SettingsFolder>> {
 		const templateMemberships = logins.getUserController() && logins.getUserController().getTemplateMemberships() || []
 		return promiseMap(loadTemplateGroupInstances(templateMemberships, locator.entityClient),
 			groupInstance =>

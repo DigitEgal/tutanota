@@ -124,7 +124,7 @@ function addTemplateGroup(name: string): Promise<boolean> {
 /**
  * Resolves to true if the user added a template group
  */
-export function showAddTemplateGroupDialog(): Promise<boolean> {
+export function showAddTemplateGroupDialog(message: TranslationKey = "createTemplateGroup_msg"): Promise<boolean> {
 
 	return new Promise(resolve => {
 
@@ -143,7 +143,7 @@ export function showAddTemplateGroupDialog(): Promise<boolean> {
 		let form = {
 			view: () => {
 				return [
-					m(".pt", lang.get("templateGroupRequired_msg")),
+					m(".pt", lang.get(message)),
 					m(nameField),
 				]
 			}

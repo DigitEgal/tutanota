@@ -1349,4 +1349,4 @@ export type TranslationKeyType = "about_label"
 	| "featureRequiredForBusinessUse_msg"
 	| "deleteTemplateGroups_msg"
 	| "openTemplatePopup_msg"
-
+	| "createTemplateGroup_msg"
