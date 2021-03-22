@@ -16,7 +16,9 @@ export type ExpanderAttrs = {
 	showWarning?: boolean,
 	color?: string,
 	style?: Object,
-	enabled?: boolean
+	enabled?: boolean,
+	// default = true
+	limitWidth?: boolean
 }
 
 export type ExpanderPanelAttrs = {
@@ -26,12 +28,11 @@ export type ExpanderPanelAttrs = {
 export class ExpanderButtonN implements MComponent<ExpanderAttrs> {
 	_domIcon: ?HTMLElement;
 
-
 	view(vnode: Vnode<ExpanderAttrs>): Children {
 		const a = vnode.attrs
 		// true if not provided
 		const enabled = a.enabled !== false
-		return m(".flex.limit-width", [ // .limit-width does not work without .flex in IE11
+		return m(".flex" + (a.limitWidth !== false ? ".limit-width" : ".flex-no-shrink"), [ // .limit-width does not work without .flex in IE11
 			m("button.expander.bg-transparent.pt-s.limit-width" + (enabled ? ".hover-ul" : ".button-no-hover"),
 				{
 					style: a.style,

@@ -47,7 +47,7 @@ import {isSameId} from "../api/common/utils/EntityUtils";
 import {TemplateListView} from "./TemplateListView"
 import {KnowledgeBaseListView} from "./KnowledgeBaseListView"
 import {promiseMap} from "../api/common/utils/PromiseUtils"
-import {loadTemplateGroupInstance, loadTemplateGroupInstances} from "../templates/model/TemplateModel"
+import {loadTemplateGroupInstances} from "../templates/model/TemplateModel"
 import type {ButtonAttrs} from "../gui/base/ButtonN"
 import {showAddTemplateGroupDialog} from "./AddGroupDialog"
 
@@ -75,6 +75,8 @@ export class SettingsView implements CurrentView {
 	_currentViewer: ?UpdatableSettingsViewer;
 	detailsViewer: ?UpdatableSettingsViewer; // the component for the details column. can be set by settings views
 	_customDomains: LazyLoaded<string[]>;
+
+	_templateGroupInvitations: Array<ReceivedGroupInvitation>;
 
 	constructor() {
 		this._userFolders = [
@@ -126,6 +128,7 @@ export class SettingsView implements CurrentView {
 			m.redraw()
 		})
 
+
 		this._knowledgeBaseFolders = []
 		this._makeKnowledgeBaseFolders().then(folders => {
 			this._knowledgeBaseFolders = folders
@@ -150,6 +153,10 @@ export class SettingsView implements CurrentView {
 			})
 		}
 
+		this._templateGroupInvitations = [
+			createReceivedGroupInvitation({sharedGroupName: "test group shared group name!"})
+		]
+
 		this._settingsFoldersColumn = new ViewColumn({
 			view: () => {
 				const hasTemplates = this._templateFolders.length > 0
@@ -167,11 +174,24 @@ export class SettingsView implements CurrentView {
 							}, this._createFolderExpanderChildren(this._adminFolders))
 							: null,
 						m(FolderExpander, {
-							label: "template_label",
-							expanded: templateSectionExpanded,
-							extraButton: addTemplateGroupButtonAttrs,
-							enabled: hasTemplates
-						}, this._createFolderExpanderChildren(this._templateFolders)),
+								label: "template_label",
+								expanded: templateSectionExpanded,
+								extraButton: addTemplateGroupButtonAttrs,
+								enabled: hasTemplates
+							},
+							[
+								this._templateFolders.map(folder => {
+									return m(".folder-row.plr-l.flex.flex-row", [
+										m(NavButtonN, this._createSettingsFolderNavButton(folder)),
+										m(ButtonN, {
+											label: "more_label",
+											icon: () => Icons.More,
+											click: () => console.log("todo"),
+										})
+									])
+								}),
+								this._renderTemplateGroupInvitations()
+							]),
 						hasTemplates
 							? m(FolderExpander, {
 								label: "knowledgebase_label",
@@ -211,36 +231,37 @@ export class SettingsView implements CurrentView {
 		this._customDomains.getAsync().then(() => m.redraw())
 	}
 
-	_createFolderExpanderChildren(folders
-		                              :
-		                              SettingsFolder[]
-	):
-		Children {
+	_createSettingsFolderNavButton(folder: SettingsFolder): NavButtonAttrs {
+		return {
+			label: folder.name,
+			icon: folder.icon,
+			href: folder.url,
+			colors: ButtonColors.Nav,
+			click: () => this.viewSlider.focus(this._settingsColumn),
+			isVisible: () => folder.isVisible()
+		}
+	}
+
+	_createFolderExpanderChildren(folders: SettingsFolder[]): Children {
 		let importUsersButton = new Button('importUsers_action',
 			() => showUserImportDialog(this._customDomains.getLoaded()),
 			() => Icons.ContactImport
 		).setColors(ButtonColors.Nav)
-		const buttons = folders.map(folder => {
-			return {
-				label: folder.name,
-				icon: folder.icon,
-				href: folder.url,
-				colors: ButtonColors.Nav,
-				click: () => this.viewSlider.focus(this._settingsColumn),
-				isVisible: () => folder.isVisible()
-			}
-		})
+		const buttons = folders.map(folder => this._createSettingsFolderNavButton(folder))
 
-		return m(".folders", buttons.map(fb => fb.isVisible()
-			? m(".folder-row.flex-start.plr-l" + (isNavButtonSelected(fb) ? ".row-selected" : ""), [
-				m(NavButtonN, fb),
-				!isApp() && isNavButtonSelected(fb) && this._selectedFolder && m.route.get().startsWith('/settings/users')
-				&& this._customDomains.isLoaded()
-				&& this._customDomains.getLoaded().length > 0
-					? m(importUsersButton)
-					: null
-			])
-			: null))
+		return m(".folders",
+			folders
+				.filter(folder => folder.isVisible())
+				.map(folder => this._createSettingsFolderNavButton(folder))
+				.map(button => m(".folder-row.flex-start.plr-l" + (isNavButtonSelected(button) ? ".row-selected" : ""), [
+						m(NavButtonN, button),
+						!isApp() && isNavButtonSelected(button) && this._selectedFolder && m.route.get().startsWith('/settings/users')
+						&& this._customDomains.isLoaded()
+						&& this._customDomains.getLoaded().length > 0
+							? m(importUsersButton)
+							: null
+					])
+				))
 	}
 
 	_getCurrentViewer()
@@ -410,6 +431,29 @@ export class SettingsView implements CurrentView {
 					() => new KnowledgeBaseListView(this, locator.entityClient, groupInstance.groupRoot)))
 	}
 
-
+	_renderTemplateGroupInvitations(): Children {
+		return this._templateGroupInvitations
+		           .map((invitation) => [
+				           m(".folder-row.flex-start.plr-l", [
+					           m(".flex-v-center.flex-grow.button-height", {
+						           style: {
+							           // It's kinda hard to tell this element to not eat up all the row and truncate text instead because it
+							           // is vertical flex. With this it will stop at 80% of what it could be and that's enough for the button.
+							           "max-width": `calc(100% - ${size.button_height}px)`
+						           }
+					           }, [
+						           m(".b.text-ellipsis", {title: getCapabilityText(downcast(invitation.capability))}, invitation.sharedGroupName),
+						           m(".small.text-ellipsis", {title: invitation.inviterMailAddress},
+							           (getDisplayText(invitation.inviterName, invitation.inviterMailAddress, true)))
+					           ]),
+					           m(ButtonN, {
+						           label: "show_action",
+						           click: () => showGroupInvitationDialog(invitation),
+						           icon: () => Icons.Eye
+					           })
+				           ])
+			           ]
+		           )
+	}
 }
 

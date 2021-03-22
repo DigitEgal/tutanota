@@ -54,7 +54,7 @@ import {fileController} from "../../file/FileController"
 import {PermissionError} from "../../api/common/error/PermissionError"
 import {MAIL_PREFIX, navButtonRoutes, throttleRoute} from "../../misc/RouteChange"
 import {attachDropdown, DropdownN} from "../../gui/base/DropdownN"
-import {MailFolderView} from "./MailFolderView"
+import {MailFolderRow} from "./MailFolderRow"
 import {styles} from "../../gui/styles"
 import {size} from "../../gui/size"
 import {FolderColumnView} from "../../gui/base/FolderColumnView"
@@ -486,7 +486,7 @@ export class MailView implements CurrentView {
 		return m(".folders",
 			systemFolderButtons.map(({id, button}) => {
 				const count = groupCounters[id]
-				return m(MailFolderView, {
+				return m(MailFolderRow, {
 					count: count,
 					button,
 					rightButton: null,
@@ -504,7 +504,7 @@ export class MailView implements CurrentView {
 				: []
 			).concat(customFolderButtons.map(({id, button, folder}) => {
 				const count = groupCounters[id]
-				return m(MailFolderView, {
+				return m(MailFolderRow, {
 					count,
 					button,
 					rightButton: isNavButtonSelected(button)
