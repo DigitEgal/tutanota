@@ -838,7 +838,7 @@ styles.registerStyle('main', () => {
 			'text-decoration': 'underline',
 			opacity: 0.7,
 		} : {},
-		'button:focus, button:hover': client.isDesktopDevice() ? {
+		'button:focus, button:hover:not(.button-no-hover)': client.isDesktopDevice() ? {
 			opacity: 0.7,
 		} : {},
 

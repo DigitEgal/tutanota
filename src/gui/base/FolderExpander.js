@@ -10,24 +10,28 @@ import {ButtonN} from "./ButtonN"
 export type FolderExpanderAttrs = {
 	label: TranslationKey | lazy<string>,
 	expanded: Stream<boolean>,
-	extraButton?: ButtonAttrs
+	extraButton?: ButtonAttrs,
+	// Whether or not the button is active.
+	// The expandion can still be controlled programmatically
+	enabled?: boolean
 }
 
 export class FolderExpander implements MComponent<FolderExpanderAttrs> {
 	view(vnode: Vnode<FolderExpanderAttrs>): Children {
 		return m(".folder-expander", [
-			m(".plr-l.flex", [
+			m(".plr-l.flex-space-between", [
 				m(ExpanderButtonN, {
 					label: vnode.attrs.label,
 					expanded: vnode.attrs.expanded,
-					color: theme.navigation_button
+					color: theme.navigation_button,
+					enabled: vnode.attrs.enabled
 				}),
 				vnode.attrs.extraButton
 					? m(".pl-xl.pt-s", m(ButtonN, vnode.attrs.extraButton))
 					: null
 			]),
 			m(ExpanderPanelN, {
-				expanded: vnode.attrs.expanded
+				expanded: vnode.attrs.expanded,
 			}, vnode.children)
 		])
 	}

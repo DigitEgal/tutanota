@@ -142,7 +142,7 @@ export class SettingsView implements CurrentView {
 		const adminFolderExpanded = stream(true)
 		const templateSectionExpanded = stream(false)
 		const knowledgeBaseSectionExpanded = stream(false)
-
+		
 		this._settingsFoldersColumn = new ViewColumn({
 			view: () => m(FolderColumnView, {
 				button: null,
@@ -160,12 +160,15 @@ export class SettingsView implements CurrentView {
 					m(FolderExpander, {
 						label: "template_label",
 						expanded: templateSectionExpanded,
-						extraButton: addTemplateGroupButtonAttrs
+						extraButton: addTemplateGroupButtonAttrs,
+						enabled: this._templateFolders.length > 0
 					}, this._createFolderExpanderChildren(this._templateFolders)),
-					m(FolderExpander, {
-						label: "knowledgebase_label",
-						expanded: knowledgeBaseSectionExpanded,
-					}, this._createFolderExpanderChildren(this._knowledgeBaseFolders)),
+					this._templateFolders.length > 0
+						? m(FolderExpander, {
+							label: "knowledgebase_label",
+							expanded: knowledgeBaseSectionExpanded,
+						}, this._createFolderExpanderChildren(this._knowledgeBaseFolders))
+						: null,
 					isTutanotaDomain() ? this._aboutThisSoftwareLink() : null,
 				]),
 				ariaLabel: "settings_label"

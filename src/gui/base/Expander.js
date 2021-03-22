@@ -15,7 +15,8 @@ export type ExpanderAttrs = {
 	expanded: Stream<boolean>,
 	showWarning?: boolean,
 	color?: string,
-	style?: Object
+	style?: Object,
+	enabled?: boolean
 }
 
 export type ExpanderPanelAttrs = {
@@ -25,37 +26,46 @@ export type ExpanderPanelAttrs = {
 export class ExpanderButtonN implements MComponent<ExpanderAttrs> {
 	_domIcon: ?HTMLElement;
 
+
 	view(vnode: Vnode<ExpanderAttrs>): Children {
 		const a = vnode.attrs
+		// true if not provided
+		const enabled = a.enabled !== false
 		return m(".flex.limit-width", [ // .limit-width does not work without .flex in IE11
-			m("button.expander.bg-transparent.pt-s.hover-ul.limit-width", {
-				style: a.style,
-				onclick: (event: MouseEvent) => {
-					a.expanded(!a.expanded())
-					event.stopPropagation()
-				},
-				oncreate: vnode => addFlash(vnode.dom),
-				onremove: (vnode) => removeFlash(vnode.dom),
-				"aria-expanded": String(!!a.expanded()),
-			}, m(".flex.items-center", [ // TODO remove wrapper after Firefox 52 has been deployed widely https://bugzilla.mozilla.org/show_bug.cgi?id=984869
-				(a.showWarning) ? m(Icon, {
-					icon: Icons.Warning,
-					style: {
-						fill: a.color ? a.color : theme.content_button,
-					}
-				}) : null,
-				m("small.b.text-ellipsis", {style: {color: a.color || theme.content_button}}, lang.getMaybeLazy(a.label).toUpperCase()),
-				m(Icon, {
-					icon: BootIcons.Expand,
-					class: "flex-center items-center",
-					style: {
-						fill: a.color ? a.color : theme.content_button,
-						'margin-right': px(-4), // icon is has 4px whitespace to the right,
-						transform: `rotateZ(${a.expanded() ? 180 : 0}deg)`,
-						transition: `transform ${DefaultAnimationTime}ms`
+			m("button.expander.bg-transparent.pt-s.limit-width" + (enabled ? ".hover-ul" : ".button-no-hover"),
+				{
+					style: a.style,
+					disabled: !enabled,
+					onclick: (event: MouseEvent) => {
+						if (enabled) {
+							a.expanded(!a.expanded())
+							event.stopPropagation()
+						}
 					},
-				}),
-			])),
+					oncreate: vnode => addFlash(vnode.dom),
+					onremove: (vnode) => removeFlash(vnode.dom),
+					"aria-expanded": String(!!a.expanded()),
+				}, m(".flex.items-center", [ // TODO remove wrapper after Firefox 52 has been deployed widely https://bugzilla.mozilla.org/show_bug.cgi?id=984869
+					(a.showWarning) ? m(Icon, {
+						icon: Icons.Warning,
+						style: {
+							fill: a.color ? a.color : theme.content_button,
+						}
+					}) : null,
+					m("small.b.text-ellipsis", {style: {color: a.color || theme.content_button}}, lang.getMaybeLazy(a.label).toUpperCase()),
+					enabled
+						? m(Icon, {
+							icon: BootIcons.Expand,
+							class: "flex-center items-center",
+							style: {
+								fill: a.color ? a.color : theme.content_button,
+								'margin-right': px(-4), // icon is has 4px whitespace to the right,
+								transform: `rotateZ(${a.expanded() ? 180 : 0}deg)`,
+								transition: `transform ${DefaultAnimationTime}ms`
+							},
+						})
+						: null,
+				])),
 		])
 	}
 }
