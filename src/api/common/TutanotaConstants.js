@@ -52,6 +52,10 @@ export const GroupType = Object.freeze({
 export type GroupTypeEnum = $Values<typeof GroupType>;
 export const getMembershipGroupType = (membership: GroupMembership): GroupTypeEnum => downcast(membership.groupType)
 
+export function groupTypeToString(groupType: GroupTypeEnum): string {
+	return reverse(GroupType)[groupType]
+}
+
 export const PermissionType = Object.freeze({
 	Public: "0",
 	Symmetric: "1",
@@ -253,7 +257,7 @@ export const SpamRuleFieldType = Object.freeze({
 })
 export type SpamRuleFieldTypeEnum = $Values<typeof SpamRuleFieldType>;
 
-export function getSparmRuleField(spamRule: EmailSenderListElement): SpamRuleFieldTypeEnum {
+export function getSpamRuleField(spamRule: EmailSenderListElement): SpamRuleFieldTypeEnum {
 	return downcast(spamRule.field)
 }
 

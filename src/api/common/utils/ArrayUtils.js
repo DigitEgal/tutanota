@@ -207,7 +207,7 @@ export function splitInChunks<T>(chunkSize: number, array: Array<T>): Array<Arra
 	return chunks
 }
 
-export function flat<T>(arrays: Array<Array<T>>): Array<T> {
+export function flat<T>(arrays: $ReadOnlyArray<$ReadOnlyArray<T>>): Array<T> {
 	return arrays.reduce((acc, val) => {
 		acc.push(...val)
 		return acc

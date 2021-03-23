@@ -24,7 +24,7 @@ import {showUserError} from "../misc/ErrorHandlerImpl"
 import {elementIdPart, listIdPart} from "../api/common/utils/EntityUtils"
 import {HtmlEditor} from "../gui/editor/HtmlEditor"
 import {UserError} from "../api/main/UserError"
-import type {DropDownChildAttrs} from "../gui/base/DropdownN"
+import type {DropdownChildAttrs} from "../gui/base/DropdownN"
 import {TEMPLATE_SHORTCUT_PREFIX} from "../templates/model/TemplateModel"
 
 /**
@@ -107,7 +107,7 @@ class KnowledgeBaseEditor implements MComponent<KnowledgeBaseEditorModel> {
 		}
 	}
 
-	_createDropdownChildAttrs(model: KnowledgeBaseEditorModel): Promise<Array<DropDownChildAttrs>> {
+	_createDropdownChildAttrs(model: KnowledgeBaseEditorModel): Promise<Array<DropdownChildAttrs>> {
 		return model.availableTemplates.getAsync().then(templates => {
 			if (templates.length > 0) {
 				return templates.map(template => {

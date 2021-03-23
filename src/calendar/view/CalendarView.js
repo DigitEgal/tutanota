@@ -89,10 +89,10 @@ import {getListId, isSameId, listIdPart} from "../../api/common/utils/EntityUtil
 import {exportCalendar, showCalendarImportDialog} from "../export/CalendarImporterDialog"
 import {createCalendarEventViewModel} from "../CalendarEventViewModel"
 import {showNotAvailableForFreeDialog} from "../../misc/SubscriptionDialogs"
-import {loadGroupMembers} from "../../sharing/GroupSharingUtils"
 import {showGroupInvitationDialog} from "../../sharing/view/GroupInvitationDialog"
-import {getGroupName, getCapabilityText, hasCapabilityOnGroup} from "../../sharing/GroupUtils"
+import {getGroupName, getCapabilityText, hasCapabilityOnGroup, loadGroupMembers} from "../../sharing/GroupUtils"
 import {showGroupSharingDialog} from "../../sharing/view/GroupSharingDialog"
+import {moreButton} from "../../gui/base/GuiUtils"
 
 export const LIMIT_PAST_EVENTS_YEARS = 100
 
@@ -556,7 +556,7 @@ export class CalendarView implements CurrentView {
 									     "cursor": "pointer",
 								     }
 							     }),
-							     m(".pl-m.b.flex-grow.text-ellipsis", {style: {width: 0}}, getGroupName(calendarInfo.groupInfo, shared, lang.get("privateCalendar_label")))
+							     m(".pl-m.b.flex-grow.text-ellipsis", {style: {width: 0}}, getGroupName(calendarInfo.groupInfo, shared))
 						     ]),
 						     this._createCalendarActionDropdown(calendarInfo, colorValue, existingGroupSettings, userSettingsGroupRoot, shared)
 					     ])
@@ -571,11 +571,7 @@ export class CalendarView implements CurrentView {
 
 	_createCalendarActionDropdown(calendarInfo: CalendarInfo, colorValue: string, existingGroupSettings: ?GroupSettings, userSettingsGroupRoot: UserSettingsGroupRoot, sharedCalendar: boolean): Children {
 		const {group, groupInfo, groupRoot} = calendarInfo
-		return m(ButtonN, attachDropdown({
-				label: "more_label",
-				colors: ButtonColors.Nav, click: noOp,
-				icon: () => Icons.More
-			}, () => [
+		return moreButton(() => [
 				{
 					label: "edit_action",
 					icon: () => Icons.Edit,
@@ -589,7 +585,20 @@ export class CalendarView implements CurrentView {
 						if (logins.getUserController().isFreeAccount()) {
 							showNotAvailableForFreeDialog(false)
 						} else {
-							showGroupSharingDialog(groupInfo, sharedCalendar)
+							showGroupSharingDialog(groupInfo, sharedCalendar, {
+								defaultGroupName: "Private",
+								shareEmailSubject: lang.get("shareCalendarInvitationEmailSubject_msg"),
+								shareEmailBody: (calendarName, sender) => lang.get("shareCalendarInvitationEmailBody_msg", {
+									// Sender is displayed like Name <mail.address@tutanota.com>. Less-than and greater-than must be encoded for HTML
+									"{inviter}": sender,
+									"{calendarName}": calendarName
+								}),
+								addMemberMessage: (_) => `${lang.get("shareCalendarWarning_msg")} ${lang.get("shareCalendarWarningAliases_msg")}`,
+								removeMemberMessage: (calendarName, invitee) => lang.get("removeCalendarParticipantConfirm_msg", {
+									"{participant}": invitee,
+									"{calendarName}": calendarName,
+								})
+							})
 						}
 					},
 					type: ButtonType.Dropdown,
@@ -600,7 +609,8 @@ export class CalendarView implements CurrentView {
 						label: "import_action",
 						icon: () => Icons.Import,
 						click: () => showCalendarImportDialog(groupRoot),
-						isVisible: () => group.type === GroupType.Calendar && hasCapabilityOnGroup(logins.getUserController().user, group, ShareCapability.Write),
+						isVisible: () => group.type === GroupType.Calendar
+							&& hasCapabilityOnGroup(logins.getUserController().user, group, ShareCapability.Write),
 						type: ButtonType.Dropdown,
 					},
 				isApp()
@@ -613,7 +623,8 @@ export class CalendarView implements CurrentView {
 							alarmInfoList
 							&& exportCalendar(getGroupName(groupInfo, sharedCalendar), groupRoot, alarmInfoList.alarms, new Date(), getTimeZone())
 						},
-						isVisible: () => group.type === GroupType.Calendar && hasCapabilityOnGroup(logins.getUserController().user, group, ShareCapability.Read),
+						isVisible: () => group.type === GroupType.Calendar
+							&& hasCapabilityOnGroup(logins.getUserController().user, group, ShareCapability.Read),
 						type: ButtonType.Dropdown,
 					},
 				{
@@ -624,12 +635,12 @@ export class CalendarView implements CurrentView {
 					type: ButtonType.Dropdown,
 				},
 			].filter(Boolean)
-		))
+		)
 	}
 
 	_confirmDeleteCalendar(calendarInfo: CalendarInfo) {
 		const calendarName = getGroupName(calendarInfo.groupInfo, false)
-		loadGroupMembers(calendarInfo.group).then(members => {
+		loadGroupMembers(calendarInfo.group, locator.entityClient).then(members => {
 			const ownerMail = logins.getUserController().userGroupInfo.mailAddress
 			const otherMembers = members.filter(member => member.info.mailAddress !== ownerMail)
 			Dialog.confirm(() => (otherMembers.length > 0

@@ -20,12 +20,12 @@ import {newMouseEvent} from "../HtmlUtils"
 
 assertMainOrNode()
 
-export type DropDownChildAttrs = string | NavButtonAttrs | ButtonAttrs;
+export type DropdownChildAttrs = string | NavButtonAttrs | ButtonAttrs;
 
 
 // TODO: add resize listener like in the old Dropdown
 export class DropdownN {
-	children: $ReadOnlyArray<DropDownChildAttrs>;
+	children: $ReadOnlyArray<DropdownChildAttrs>;
 	_domDropdown: HTMLElement;
 	origin: ?PosRect;
 	maxHeight: number;
@@ -40,7 +40,7 @@ export class DropdownN {
 	_isFilterable: boolean;
 
 
-	constructor(lazyChildren: lazy<$ReadOnlyArray<DropDownChildAttrs>>, width: number) {
+	constructor(lazyChildren: lazy<$ReadOnlyArray<DropdownChildAttrs>>, width: number) {
 		this.children = []
 		this.maxHeight = 0
 		this._width = width
@@ -271,7 +271,7 @@ export class DropdownN {
 		return Promise.resolve()
 	}
 
-	_visibleChildren(): Array<DropDownChildAttrs> {
+	_visibleChildren(): Array<DropdownChildAttrs> {
 		return this.children.filter(b => {
 			return (typeof b === "string")
 				? b.includes(this._filterString().toLowerCase())
@@ -284,13 +284,13 @@ export class DropdownN {
 	}
 }
 
-export function createDropdown(lazyButtons: lazy<$ReadOnlyArray<DropDownChildAttrs>>, width: number = 200): clickHandler {
+export function createDropdown(lazyButtons: lazy<$ReadOnlyArray<DropdownChildAttrs>>, width: number = 200): clickHandler {
 	return createAsyncDropdown(() => Promise.resolve(lazyButtons()), width)
 }
 
 const importBase = typeof module !== "undefined" ? module.id : __moduleName
 
-export function createAsyncDropdown(lazyButtons: lazyAsync<$ReadOnlyArray<DropDownChildAttrs>>, width: number = 200): clickHandler {
+export function createAsyncDropdown(lazyButtons: lazyAsync<$ReadOnlyArray<DropdownChildAttrs>>, width: number = 200): clickHandler {
 	// not all browsers have the actual button as e.currentTarget, but all of them send it as a second argument (see https://github.com/tutao/tutanota/issues/1110)
 	return ((e, dom) => {
 		let originalButtons = lazyButtons()
@@ -334,7 +334,7 @@ export type DropdownButtonAttrs = $Rest<ButtonAttrs, {click?: clickHandler}>
  */
 export function attachDropdown(
 	mainButtonAttrs: DropdownButtonAttrs,
-	childAttrs: lazy<$Promisable<$ReadOnlyArray<DropDownChildAttrs>>>,
+	childAttrs: lazy<$Promisable<$ReadOnlyArray<DropdownChildAttrs>>>,
 	showDropdown?: lazy<boolean> = () => true,
 	width?: number): ButtonAttrs {
 

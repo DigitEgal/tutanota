@@ -6,7 +6,8 @@ import {isSelectedPrefix} from "../gui/base/NavButtonN"
 
 assertMainOrNode()
 
-export class SettingsFolder {
+export class SettingsFolder<+T> {
+	+data: T
 	name: TranslationKey | lazy<string>;
 	icon: lazyIcon;
 	path: string;
@@ -14,11 +15,12 @@ export class SettingsFolder {
 	viewerCreator: lazy<UpdatableSettingsViewer>;
 	_isVisibleHandler: lazy<boolean>;
 
-	constructor(name: TranslationKey | lazy<string>, icon: lazyIcon, path: string, viewerCreator: lazy<UpdatableSettingsViewer>) {
+	constructor(name: TranslationKey | lazy<string>, icon: lazyIcon, path: string, viewerCreator: lazy<UpdatableSettingsViewer>, data: T) {
+		this.data = data
 		this.name = name
 		this.icon = icon
 		this.path = path
-		this.url = `/settings/${path}`
+		this.url = `/settings/${encodeURIComponent(path)}`
 		this.viewerCreator = viewerCreator
 		this._isVisibleHandler = () => true
 	}
@@ -31,7 +33,7 @@ export class SettingsFolder {
 		return this._isVisibleHandler()
 	}
 
-	setIsVisibleHandler(isVisibleHandler: lazy<boolean>): SettingsFolder {
+	setIsVisibleHandler(isVisibleHandler: lazy<boolean>): SettingsFolder<T> {
 		this._isVisibleHandler = isVisibleHandler
 		return this
 	}

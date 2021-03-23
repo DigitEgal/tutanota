@@ -16,6 +16,7 @@ import type {User} from "../api/entities/sys/User"
 import {UserTypeRef} from "../api/entities/sys/User"
 import {load} from "../api/main/Entity"
 import {Button} from "../gui/base/Button"
+import type {ButtonAttrs} from "../gui/base/ButtonN"
 import {ButtonColors, ButtonN} from "../gui/base/ButtonN"
 import {logins} from "../api/main/LoginController"
 import {GroupListView} from "./GroupListView"
@@ -36,6 +37,7 @@ import {LazyLoaded} from "../api/common/utils/LazyLoaded"
 import {getAvailableDomains} from "./AddUserDialog"
 import {CustomerInfoTypeRef} from "../api/entities/sys/CustomerInfo"
 import {AppearanceSettingsViewer} from "./AppearanceSettingsViewer"
+import type {NavButtonAttrs} from "../gui/base/NavButtonN"
 import {isNavButtonSelected, NavButtonN} from "../gui/base/NavButtonN"
 import {Dialog} from "../gui/base/Dialog"
 import {AboutDialog} from "./AboutDialog"
@@ -48,24 +50,19 @@ import {TemplateListView} from "./TemplateListView"
 import {KnowledgeBaseListView} from "./KnowledgeBaseListView"
 import {promiseMap} from "../api/common/utils/PromiseUtils"
 import {loadTemplateGroupInstances} from "../templates/model/TemplateModel"
-import type {ButtonAttrs} from "../gui/base/ButtonN"
 import {showAddTemplateGroupDialog} from "./AddGroupDialog"
 import type {ReceivedGroupInvitation} from "../api/entities/sys/ReceivedGroupInvitation"
 import {createReceivedGroupInvitation} from "../api/entities/sys/ReceivedGroupInvitation"
-import type {NavButtonAttrs} from "../gui/base/NavButtonN"
 import {downcast} from "../api/common/utils/Utils"
 import {getDisplayText} from "../mail/model/MailUtils"
 import {showGroupInvitationDialog} from "../sharing/view/GroupInvitationDialog"
 import {getCapabilityText} from "../sharing/GroupUtils"
+import type {TemplateGroupInstance} from "../templates/model/TemplateGroupModel"
+import {showGroupSharingDialog} from "../sharing/view/GroupSharingDialog"
+import {moreButton} from "../gui/base/GuiUtils"
+import {flat} from "../api/common/utils/ArrayUtils"
 
 assertMainOrNode()
-
-export type TemplateGroupExpander = {
-	groupID: Id,
-	groupName: string,
-	expanded: Stream<boolean>,
-	settingsFolder: SettingsFolder[]
-}
 
 export class SettingsView implements CurrentView {
 
@@ -74,11 +71,11 @@ export class SettingsView implements CurrentView {
 	_settingsFoldersColumn: ViewColumn;
 	_settingsColumn: ViewColumn;
 	_settingsDetailsColumn: ViewColumn;
-	_userFolders: SettingsFolder[];
-	_adminFolders: SettingsFolder[];
-	_templateFolders: SettingsFolder[];
-	_knowledgeBaseFolders: SettingsFolder[];
-	_selectedFolder: SettingsFolder;
+	_userFolders: SettingsFolder<void>[];
+	_adminFolders: SettingsFolder<void>[];
+	_templateFolders: SettingsFolder<TemplateGroupInstance>[];
+	_knowledgeBaseFolders: SettingsFolder<void>[];
+	_selectedFolder: SettingsFolder<*>;
 	_currentViewer: ?UpdatableSettingsViewer;
 	detailsViewer: ?UpdatableSettingsViewer; // the component for the details column. can be set by settings views
 	_customDomains: LazyLoaded<string[]>;
@@ -128,13 +125,11 @@ export class SettingsView implements CurrentView {
 			}
 		}
 
-
 		this._templateFolders = []
 		this._makeTemplateFolders().then(folders => {
 			this._templateFolders = folders
 			m.redraw()
 		})
-
 
 		this._knowledgeBaseFolders = []
 		this._makeKnowledgeBaseFolders().then(folders => {
@@ -146,11 +141,11 @@ export class SettingsView implements CurrentView {
 
 		const userFolderExpanded = stream(true)
 		const adminFolderExpanded = stream(true)
-		const templateSectionExpanded = stream(false)
+		const templateSectionExpanded = stream(true)
 		const knowledgeBaseSectionExpanded = stream(false)
 
 		const addTemplateGroupButtonAttrs: ButtonAttrs = {
-			label: () => "Add template group",
+			label: () => "Add template group", // TODO Translate
 			icon: () => Icons.Add,
 			click: () => showAddTemplateGroupDialog().then(didAdd => {
 				if (didAdd) {
@@ -190,11 +185,19 @@ export class SettingsView implements CurrentView {
 								this._templateFolders.map(folder => {
 									return m(".folder-row.plr-l.flex.flex-row", [
 										m(NavButtonN, this._createSettingsFolderNavButton(folder)),
-										m(ButtonN, {
-											label: "more_label",
-											icon: () => Icons.More,
-											click: () => console.log("todo"),
-										})
+										moreButton([
+											{
+												label: "sharing_label",
+												click: () => // TODO
+													showGroupSharingDialog(folder.data.groupInfo, true, {
+														defaultGroupName: "string",
+														shareEmailSubject: "string",
+														shareEmailBody: (groupName: string, sharer: string) => "string",
+														addMemberMessage: (groupName: string) => "string",
+														removeMemberMessage: (groupName: string, member: string) => "string",
+													}),
+											}
+										])
 									])
 								}),
 								this._renderTemplateGroupInvitations()
@@ -238,7 +241,7 @@ export class SettingsView implements CurrentView {
 		this._customDomains.getAsync().then(() => m.redraw())
 	}
 
-	_createSettingsFolderNavButton(folder: SettingsFolder): NavButtonAttrs {
+	_createSettingsFolderNavButton(folder: SettingsFolder<*>): NavButtonAttrs {
 		return {
 			label: folder.name,
 			icon: folder.icon,
@@ -249,7 +252,7 @@ export class SettingsView implements CurrentView {
 		}
 	}
 
-	_createFolderExpanderChildren(folders: SettingsFolder[]): Children {
+	_createFolderExpanderChildren(folders: SettingsFolder<void>[]): Children {
 		let importUsersButton = new Button('importUsers_action',
 			() => showUserImportDialog(this._customDomains.getLoaded()),
 			() => Icons.ContactImport
@@ -271,9 +274,7 @@ export class SettingsView implements CurrentView {
 				))
 	}
 
-	_getCurrentViewer()
-		:
-		Component {
+	_getCurrentViewer(): Component {
 		if (!this._currentViewer) {
 			this.detailsViewer = null
 			this._currentViewer = this._selectedFolder.viewerCreator()
@@ -284,10 +285,7 @@ export class SettingsView implements CurrentView {
 	/**
 	 * Notifies the current view about changes of the url within its scope.
 	 */
-	updateUrl(args
-		          :
-		          Object
-	) {
+	updateUrl(args: Object) {
 		if (!args.folder) {
 			this._setUrl(this._userFolders[0].url)
 		} else if (args.folder || !m.route.get().startsWith("/settings")) { // ensure that current viewer will be reinitialized
@@ -309,25 +307,16 @@ export class SettingsView implements CurrentView {
 		}
 	}
 
-	_allSettingsFolders()
-		:
-		$ReadOnlyArray<SettingsFolder> {
-		return [this._userFolders, this._adminFolders, this._templateFolders, this._knowledgeBaseFolders].flat()
+	_allSettingsFolders(): $ReadOnlyArray<SettingsFolder<*>> {
+		return flat([this._userFolders, this._adminFolders, this._templateFolders, this._knowledgeBaseFolders])
 	}
 
-	_setUrl(url
-		        :
-		        string
-	) {
+	_setUrl(url: string) {
 		navButtonRoutes.settingsUrl = url
 		m.route.set(url + location.hash)
 	}
 
-	_isGlobalOrLocalAdmin(user
-		                      :
-		                      User
-	):
-		boolean {
+	_isGlobalOrLocalAdmin(user: User): boolean {
 		return user.memberships.find(m => m.groupType === GroupType.Admin || m.groupType === GroupType.LocalAdmin)
 			!= null
 	}
@@ -336,11 +325,7 @@ export class SettingsView implements CurrentView {
 		this.viewSlider.focus(this._settingsDetailsColumn)
 	}
 
-	entityEventsReceived<T>(updates
-		                        :
-		                        $ReadOnlyArray<EntityUpdateData>
-	):
-		Promise<void> {
+	entityEventsReceived<T>(updates: $ReadOnlyArray<EntityUpdateData>): Promise<void> {
 		return Promise.each(updates, update => {
 			if (isUpdateForTypeRef(UserTypeRef, update) && isSameId(update.instanceId, logins.getUserController().user._id)) {
 				return load(UserTypeRef, update.instanceId).then(user => {
@@ -377,15 +362,11 @@ export class SettingsView implements CurrentView {
 		})
 	}
 
-	getViewSlider()
-		:
-	? IViewSlider {
+	getViewSlider(): ? IViewSlider {
 		return this.viewSlider
 	}
 
-	_aboutThisSoftwareLink()
-		:
-		Vnode<any> {
+	_aboutThisSoftwareLink(): Vnode<any> {
 		return m(".pb.pt-l.flex-no-shrink.flex.col.justify-end", [
 			m("button.text-center.small.no-text-decoration", {
 					style: {
@@ -414,27 +395,25 @@ export class SettingsView implements CurrentView {
 		])
 	}
 
-	_makeTemplateFolders()
-		:
-		Promise<Array<SettingsFolder>> {
+	_makeTemplateFolders(): Promise<Array<SettingsFolder<TemplateGroupInstance>>> {
 		const templateMemberships = logins.getUserController() && logins.getUserController().getTemplateMemberships() || []
 		return promiseMap(loadTemplateGroupInstances(templateMemberships, locator.entityClient),
 			groupInstance =>
 				new SettingsFolder(() => groupInstance.groupInfo.name,
 					() => Icons.Folder,
-					`template-${encodeURIComponent(groupInstance.groupInfo.name)}`,
-					() => new TemplateListView(this, locator.entityClient, groupInstance.groupRoot)))
+					`template-${groupInstance.groupInfo.name}`,
+					() => new TemplateListView(this, locator.entityClient, groupInstance.groupRoot),
+					groupInstance))
 	}
 
-	_makeKnowledgeBaseFolders()
-		:
-		Promise<Array<SettingsFolder>> {
+
+	_makeKnowledgeBaseFolders(): Promise<Array<SettingsFolder<void>>> {
 		const templateMemberships = logins.getUserController() && logins.getUserController().getTemplateMemberships() || []
 		return promiseMap(loadTemplateGroupInstances(templateMemberships, locator.entityClient),
 			groupInstance =>
 				new SettingsFolder(() => groupInstance.groupInfo.name,
 					() => Icons.Folder,
-					`knowledgeBase-${encodeURIComponent(groupInstance.groupInfo.name)}`,
+					`knowledgeBase-${groupInstance.groupInfo.name}`,
 					() => new KnowledgeBaseListView(this, locator.entityClient, groupInstance.groupRoot)))
 	}
 
