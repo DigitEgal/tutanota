@@ -60,6 +60,7 @@ export class ContactEditor {
 	phoneNumbers: Array<[ContactPhoneNumber, Id]>
 	addresses: Array<[ContactAddress, Id]>
 	socialIds: Array<[ContactSocialId, Id]>
+	birthday: Stream<string>
 
 	_newContactIdReceiver: ?(contactId: Id) => mixed
 	windowCloseUnsubscribe: () => mixed
@@ -95,6 +96,9 @@ export class ContactEditor {
 
 		this.firstName = stream(this.contact.firstName)
 		this.lastName = stream(this.contact.lastName)
+
+		this.invalidBirthday = false
+		this.birthday = stream(formatBirthdayOfContact(this.contact) || "")
 
 		this.dialog = this._createDialog()
 
@@ -324,7 +328,8 @@ export class ContactEditor {
 		return {
 			label: 'comment_label',
 			value: stream(this.contact.comment),
-			oninput: value => this.contact.comment = value
+			oninput: value => this.contact.comment = value,
+			type: Type.Area
 		}
 	}
 
@@ -353,7 +358,6 @@ export class ContactEditor {
 	}
 
 	_createBirthdayAttrs(): TextFieldAttrs {
-		this.invalidBirthday = false
 		let birthdayHelpText = () => {
 			let bday = createBirthday()
 			bday.day = "22"
@@ -366,7 +370,7 @@ export class ContactEditor {
 
 		return {
 			label: 'birthday_alt',
-			value: stream(formatBirthdayOfContact(this.contact) || ""),
+			value: this.birthday,
 			helpLabel: birthdayHelpText,
 			oninput: value => {
 				if (value.trim().length === 0) {
