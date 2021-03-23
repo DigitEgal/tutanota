@@ -31,6 +31,6 @@ export class TextDisplayArea implements MComponent<TextDisplayAreaAttrs> {
 				},
 				disabled: true,
 			}, vnode.attrs.value)
-		])
+		]
 	}
 }
