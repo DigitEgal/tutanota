@@ -20,7 +20,6 @@ import {htmlSanitizer} from "../misc/HtmlSanitizer"
 import {ButtonType} from "../gui/base/ButtonN"
 import {ProgrammingError} from "../api/common/error/ProgrammingError"
 
-
 export type SubscriptionOptions = {
 	businessUse: Stream<boolean>,
 	paymentInterval: Stream<number>

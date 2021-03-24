@@ -1,6 +1,5 @@
 // @flow
 import m from "mithril"
-import stream from "mithril/stream/stream.js"
 import {assertMainOrNode, isApp, isDesktop, isIOSApp, isTutanotaDomain} from "../api/common/Env"
 import {ColumnType, ViewColumn} from "../gui/base/ViewColumn"
 import {ViewSlider} from "../gui/base/ViewSlider"
@@ -17,7 +16,7 @@ import {UserTypeRef} from "../api/entities/sys/User"
 import {load} from "../api/main/Entity"
 import {Button} from "../gui/base/Button"
 import type {ButtonAttrs} from "../gui/base/ButtonN"
-import {ButtonColors, ButtonN} from "../gui/base/ButtonN"
+import {ButtonColors} from "../gui/base/ButtonN"
 import {logins} from "../api/main/LoginController"
 import {GroupListView} from "./GroupListView"
 import {ContactFormListView} from "./ContactFormListView"
@@ -44,25 +43,19 @@ import {AboutDialog} from "./AboutDialog"
 import {navButtonRoutes, SETTINGS_PREFIX} from "../misc/RouteChange"
 import {size} from "../gui/size"
 import {FolderColumnView} from "../gui/base/FolderColumnView"
-import {FolderExpander} from "../gui/base/FolderExpander"
 import {isSameId} from "../api/common/utils/EntityUtils";
 import {TemplateListView} from "./TemplateListView"
 import {KnowledgeBaseListView} from "./KnowledgeBaseListView"
 import {promiseMap} from "../api/common/utils/PromiseUtils"
 import {loadTemplateGroupInstances} from "../templates/model/TemplateModel"
 import {showAddTemplateGroupDialog} from "./AddGroupDialog"
-import type {ReceivedGroupInvitation} from "../api/entities/sys/ReceivedGroupInvitation"
-import {createReceivedGroupInvitation} from "../api/entities/sys/ReceivedGroupInvitation"
-import {downcast} from "../api/common/utils/Utils"
-import {getDisplayText} from "../mail/model/MailUtils"
-import {showGroupInvitationDialog} from "../sharing/view/GroupInvitationDialog"
-import {getCapabilityText, loadReceivedGroupInvitations} from "../sharing/GroupUtils"
 import type {TemplateGroupInstance} from "../templates/model/TemplateGroupModel"
 import {showGroupSharingDialog} from "../sharing/view/GroupSharingDialog"
 import {moreButton} from "../gui/base/GuiUtils"
-import {flat} from "../api/common/utils/ArrayUtils"
+import { flat} from "../api/common/utils/ArrayUtils"
 import {GroupInvitationFolderRow} from "../sharing/view/GroupInvitationFolderRow"
 import {SidebarSection} from "../gui/SidebarSection"
+import {ReceivedGroupInvitationsModel} from "../sharing/model/ReceivedGroupInvitationsModel"
 
 assertMainOrNode()
 
@@ -82,7 +75,7 @@ export class SettingsView implements CurrentView {
 	detailsViewer: ?UpdatableSettingsViewer; // the component for the details column. can be set by settings views
 	_customDomains: LazyLoaded<string[]>;
 
-	_templateGroupInvitations: Array<ReceivedGroupInvitation>;
+	_templateInvitations: ReceivedGroupInvitationsModel
 
 	constructor() {
 		this._userFolders = [
@@ -141,47 +134,38 @@ export class SettingsView implements CurrentView {
 
 		this._selectedFolder = this._userFolders[0]
 
-		const userFolderExpanded = stream(true)
-		const adminFolderExpanded = stream(true)
-		const templateSectionExpanded = stream(true)
-		const knowledgeBaseSectionExpanded = stream(false)
-
 		const addTemplateGroupButtonAttrs: ButtonAttrs = {
 			label: () => "Add template group", // TODO Translate
 			icon: () => Icons.Add,
-			click: () => showAddTemplateGroupDialog().then(didAdd => {
-				if (didAdd) {
-					templateSectionExpanded(true)
-					knowledgeBaseSectionExpanded(true)
-				}
-			})
+			click: () => showAddTemplateGroupDialog()
 		}
 
-		this._templateGroupInvitations = []
-		loadReceivedGroupInvitations(logins.getUserController(), locator.entityClient, GroupType.Template)
-			.then(invitations => this._templateGroupInvitations = invitations)
+		this._templateInvitations =
+			new ReceivedGroupInvitationsModel(GroupType.Template, locator.eventController, locator.entityClient, logins)
+		this._templateInvitations.invitations.map(m.redraw.bind(m))
+		this._templateInvitations.init()
 
 		this._settingsFoldersColumn = new ViewColumn({
+			onbeforeremove: () => {
+				this._templateInvitations.dispose()
+			},
 			view: () => {
 				const hasTemplates = this._templateFolders.length > 0
+				const hasTemplateInvitations = this._templateInvitations.invitations().length > 0
 				return m(FolderColumnView, {
 					button: null,
 					content: m(".flex.flex-grow.col", [
-						m(FolderExpander, {
+						m(SidebarSection, {
 							label: "userSettings_label",
-							expanded: userFolderExpanded
-						}, this._createFolderExpanderChildren(this._userFolders)),
+						}, this._createSidebarSectionChildren(this._userFolders)),
 						logins.isUserLoggedIn() && logins.getUserController().isGlobalOrLocalAdmin()
-							? m(FolderExpander, {
+							? m(SidebarSection, {
 								label: "adminSettings_label",
-								expanded: adminFolderExpanded
-							}, this._createFolderExpanderChildren(this._adminFolders))
+							}, this._createSidebarSectionChildren(this._adminFolders))
 							: null,
-						m(FolderExpander, {
+						m(SidebarSection, {
 								label: "template_label",
-								expanded: templateSectionExpanded,
-								extraButton: addTemplateGroupButtonAttrs,
-								enabled: hasTemplates
+								buttonAttrs: addTemplateGroupButtonAttrs,
 							},
 							[
 								this._templateFolders.map(folder => {
@@ -202,14 +186,17 @@ export class SettingsView implements CurrentView {
 										])
 									])
 								}),
-								m(SidebarSection, {label: () => "Template Invitations"}, // TODO Translate
-									this._templateGroupInvitations.map(invitation => m(GroupInvitationFolderRow, {invitation})))
+								hasTemplateInvitations
+									? m(SidebarSection, {
+										// TODO Translate
+										label: () => "Template Invitations"
+									}, this._templateInvitations.invitations().map(invitation => m(GroupInvitationFolderRow, {invitation})))
+									: null
 							]),
 						hasTemplates
-							? m(FolderExpander, {
+							? m(SidebarSection, {
 								label: "knowledgebase_label",
-								expanded: knowledgeBaseSectionExpanded,
-							}, this._createFolderExpanderChildren(this._knowledgeBaseFolders))
+							}, this._createSidebarSectionChildren(this._knowledgeBaseFolders))
 							: null,
 						isTutanotaDomain() ? this._aboutThisSoftwareLink() : null,
 					]),
@@ -255,14 +242,14 @@ export class SettingsView implements CurrentView {
 		}
 	}
 
-	_createFolderExpanderChildren(folders: SettingsFolder<void>[]): Children {
+	_createSidebarSectionChildren(folders: SettingsFolder<void>[]): Children {
 		let importUsersButton = new Button('importUsers_action',
 			() => showUserImportDialog(this._customDomains.getLoaded()),
 			() => Icons.ContactImport
 		).setColors(ButtonColors.Nav)
 		const buttons = folders.map(folder => this._createSettingsFolderNavButton(folder))
 
-		return m(".folders",
+		return m("",
 			folders
 				.filter(folder => folder.isVisible())
 				.map(folder => this._createSettingsFolderNavButton(folder))
@@ -329,7 +316,7 @@ export class SettingsView implements CurrentView {
 	}
 
 	entityEventsReceived<T>(updates: $ReadOnlyArray<EntityUpdateData>): Promise<void> {
-		return Promise.each(updates, update => {
+		return promiseMap(updates, update => {
 			if (isUpdateForTypeRef(UserTypeRef, update) && isSameId(update.instanceId, logins.getUserController().user._id)) {
 				return load(UserTypeRef, update.instanceId).then(user => {
 					// the user admin status might have changed
@@ -405,7 +392,7 @@ export class SettingsView implements CurrentView {
 				new SettingsFolder(() => groupInstance.groupInfo.name,
 					() => Icons.Folder,
 					`template-${groupInstance.groupInfo.name}`,
-					() => new TemplateListView(this, locator.entityClient, groupInstance.groupRoot),
+					() => new TemplateListView(this, groupInstance, locator.entityClient, logins),
 					groupInstance))
 	}
 

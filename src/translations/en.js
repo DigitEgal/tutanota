@@ -153,9 +153,6 @@ export default {
 		"calendarRepeatStopConditionNever_label": "Never",
 		"calendarRepeatStopConditionOccurrences_label": "After occurrences",
 		"calendarRepeatStopCondition_label": "Ends",
-		"groupCapabilityInvite_label": "Write and manage sharing",
-		"groupCapabilityWrite_label": "Read only",
-		"groupCapabilityWrite_label": "Read and write",
 		"calendarView_action": "Switch to the calendar view",
 		"calendar_label": "Calendar",
 		"callNumber_alt": "Call this number",
@@ -1362,6 +1359,9 @@ export default {
 		"featureRequiredForBusinessUse_msg": "This feature is required for business use.",
 		"deleteTemplateGroups_msg": "Please remove all template groups before deactivating the business feature.",
 		"openTemplatePopup_msg": "Open templates popup",
-		"createTemplateGroup_msg": "Create a new template group."
+		"createTemplateGroup_msg": "Create a new template group.",
+		"groupCapabilityInvite_label": "Write and manage sharing",
+		"groupCapabilityWrite_label": "Read and write",
+		"groupCapabilityRead_label": "Read only",
 	}
 }

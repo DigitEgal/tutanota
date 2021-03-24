@@ -19,6 +19,7 @@ import {TemplateGroupRootTypeRef} from "../../api/entities/tutanota/TemplateGrou
 import type {TemplateGroupRoot} from "../../api/entities/tutanota/TemplateGroupRoot"
 import {KnowledgeBaseEntryTypeRef} from "../../api/entities/tutanota/KnowledgeBaseEntry"
 import type {TemplateGroupInstance} from "./TemplateGroupModel"
+import {GroupTypeRef} from "../../api/entities/sys/Group"
 
 /**
  *   Model that holds main logic for the Template Feature.
@@ -213,8 +214,18 @@ export function loadTemplateGroupInstances(memberships: Array<GroupMembership>, 
 
 export function loadTemplateGroupInstance(groupMembership: GroupMembership, entityClient: EntityClient): Promise<TemplateGroupInstance> {
 	return entityClient.load(GroupInfoTypeRef, groupMembership.groupInfo)
-	                   .then(groupInfo => entityClient.load(TemplateGroupRootTypeRef, groupInfo.group)
-	                                                  .then(groupRoot => ({groupInfo, groupRoot, groupMembership})))
+	                   .then(groupInfo =>
+		                   entityClient.load(TemplateGroupRootTypeRef, groupInfo.group)
+		                               .then(groupRoot =>
+			                               entityClient.load(GroupTypeRef, groupInfo.group)
+			                                           .then(userGroup => {
+				                                           return {
+					                                           groupInfo,
+					                                           userGroup,
+					                                           groupRoot,
+					                                           groupMembership
+				                                           }
+			                                           })))
 }
 
 function loadTemplates(templateGroups: Array<TemplateGroupRoot>, entityClient: EntityClient): Promise<Array<EmailTemplate>> {

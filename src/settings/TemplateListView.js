@@ -18,6 +18,10 @@ import {EntityClient} from "../api/common/EntityClient"
 import {isSameId} from "../api/common/utils/EntityUtils"
 import {createEmailTemplateContent} from "../api/entities/tutanota/EmailTemplateContent"
 import {TEMPLATE_SHORTCUT_PREFIX} from "../templates/model/TemplateModel"
+import {hasCapabilityOnGroup} from "../sharing/GroupUtils"
+import {ShareCapability} from "../api/common/TutanotaConstants"
+import type {TemplateGroupInstance} from "../templates/model/TemplateGroupModel"
+import type {LoginController} from "../api/main/LoginController"
 
 assertMainOrNode()
 
@@ -29,19 +33,21 @@ export class TemplateListView implements UpdatableSettingsViewer {
 	_list: ?List<EmailTemplate, TemplateRow>
 	_listId: ?Id
 	_settingsView: SettingsView
-	_templateGroupRoot: TemplateGroupRoot
+	_groupInstance: TemplateGroupInstance
 	_entityClient: EntityClient
+	_logins: LoginController
 
-	constructor(settingsView: SettingsView, entityClient: EntityClient, templateGroupRoot: TemplateGroupRoot) {
+	constructor(settingsView: SettingsView, templateGroupInstance: TemplateGroupInstance, entityClient: EntityClient, logins: LoginController) {
 		this._settingsView = settingsView
+		this._groupInstance = templateGroupInstance
 		this._entityClient = entityClient
-		this._templateGroupRoot = templateGroupRoot
+		this._logins = logins
 		this._listId = null
 		this._initTemplateList()
 	}
 
 	_initTemplateList() {
-		const templateListId = this._templateGroupRoot.templates
+		const templateListId = this._groupInstance.groupRoot.templates
 		const listConfig: ListConfig<EmailTemplate, TemplateRow> = {
 			rowHeight: size.list_row_height,
 			fetch: (startId, count) => {
@@ -89,7 +95,7 @@ export class TemplateListView implements UpdatableSettingsViewer {
 
 
 	view(): Children {
-		const templateGroupRoot = this._templateGroupRoot
+		const templateGroupRoot = this._groupInstance.groupRoot
 		const entityClient = this._entityClient
 		return m(".flex.flex-column.fill-absolute", [
 			m(".flex.flex-column.justify-center.plr-l.list-border-right.list-bg.list-header",
@@ -108,8 +114,9 @@ export class TemplateListView implements UpdatableSettingsViewer {
 							label: "addTemplate_label",
 							type: ButtonType.Primary,
 							click: () => {
-								showTemplateEditor(null, this._templateGroupRoot)
-							}
+								showTemplateEditor(null, this._groupInstance.groupRoot)
+							},
+							isVisible: () => hasCapabilityOnGroup(this._logins.getUserController().user, this._groupInstance.userGroup, ShareCapability.Write)
 						})),
 					]
 				)),

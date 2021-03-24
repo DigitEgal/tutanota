@@ -61,7 +61,7 @@ import {EntityClient} from "../api/common/EntityClient"
 import {BusinessFeatureRequiredError} from "../api/main/BusinessFeatureRequiredError"
 import {parseTime, timeStringFromParts} from "../misc/Formatter"
 import type {Customer} from "../api/entities/sys/Customer"
-import {hasCapabilityOnGroup} from "../sharing/GroupUtils"
+import {hasCapabilityOnGroup, isUsingBusinessFeatureAllowed} from "../sharing/GroupUtils"
 
 const TIMESTAMP_ZERO_YEAR = 1970
 
@@ -1030,14 +1030,6 @@ export function createCalendarEventViewModel(date: Date, calendars: Map<Id, Cale
 	})
 }
 
-
-/**
- * Checks if the business feature is booked for the customer. Can be used without loading the last booking instance. This is required
- * for non admin users because they are not allowed to access the bookings.
- */
-function isUsingBusinessFeatureAllowed(customer: Customer): boolean {
-	return !!customer.customizations.find(feature => feature.feature === FeatureType.BusinessFeatureEnabled)
-}
 
 /**
  * Return true if the customer has a premium legacy subscription that allows using parts of the business feature

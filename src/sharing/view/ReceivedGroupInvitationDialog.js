@@ -14,7 +14,8 @@ import {ButtonN, ButtonType} from "../../gui/base/ButtonN"
 import type {ReceivedGroupInvitation} from "../../api/entities/sys/ReceivedGroupInvitation"
 import {isSameId} from "../../api/common/utils/EntityUtils"
 import {sendAcceptNotificationEmail, sendRejectNotificationEmail} from "../GroupSharingUtils"
-import {getCapabilityText} from "../GroupUtils"
+import {getCapabilityText, getInvitationGroupType, groupRequiresBusinessFeature, isUsingBusinessFeatureAllowed} from "../GroupUtils"
+import {showBusinessFeatureRequiredDialog} from "../../misc/SubscriptionDialogs"
 
 
 export function showGroupInvitationDialog(invitation: ReceivedGroupInvitation) {
@@ -67,10 +68,9 @@ export function showGroupInvitationDialog(invitation: ReceivedGroupInvitation) {
 					label: "acceptInvitation_action",
 					type: ButtonType.Login,
 					click: () => {
-						import("../../misc/SubscriptionDialogs")
-							.then(SubscriptionDialogUtils => SubscriptionDialogUtils.checkPremiumSubscription(false))
-							.then(ok => {
-								if (ok) {
+						checkCanAcceptInvitation(invitation)
+							.then(canAccept => {
+								if (canAccept) {
 									acceptInvite(invitation).then(() => {
 										dialog.close()
 										const newColor = colorStream().substring(1) // color is stored without #
@@ -102,6 +102,25 @@ export function showGroupInvitationDialog(invitation: ReceivedGroupInvitation) {
 		},
 		cancelActionTextId: 'close_alt'
 	})
+}
+
+function checkCanAcceptInvitation(invitation: ReceivedGroupInvitation): Promise<boolean> {
+	return import("../../misc/SubscriptionDialogs")
+		.then(SubscriptionDialogUtils => SubscriptionDialogUtils.checkPremiumSubscription(false))
+		.then(allowed => {
+			if (!allowed) {
+				return false
+			}
+
+			return logins.getUserController().loadCustomer().then(customer => {
+				if (groupRequiresBusinessFeature(getInvitationGroupType(invitation)) && !isUsingBusinessFeatureAllowed(customer)) {
+					// TODO Translate
+					return showBusinessFeatureRequiredDialog(() => "It's templates")
+				} else {
+					return true
+				}
+			})
+		})
 }
 
 

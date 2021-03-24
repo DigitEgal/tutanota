@@ -89,7 +89,7 @@ import {getListId, isSameId, listIdPart} from "../../api/common/utils/EntityUtil
 import {exportCalendar, showCalendarImportDialog} from "../export/CalendarImporterDialog"
 import {createCalendarEventViewModel} from "../CalendarEventViewModel"
 import {showNotAvailableForFreeDialog} from "../../misc/SubscriptionDialogs"
-import {showGroupInvitationDialog} from "../../sharing/view/GroupInvitationDialog"
+import {showGroupInvitationDialog} from "../../sharing/view/ReceivedGroupInvitationDialog"
 import {
 	getGroupName,
 	getCapabilityText,
@@ -101,6 +101,7 @@ import {showGroupSharingDialog} from "../../sharing/view/GroupSharingDialog"
 import {moreButton} from "../../gui/base/GuiUtils"
 import {GroupInvitationFolderRow} from "../../sharing/view/GroupInvitationFolderRow"
 import {SidebarSection} from "../../gui/SidebarSection"
+import {ReceivedGroupInvitationsModel} from "../../sharing/model/ReceivedGroupInvitationsModel"
 
 export const LIMIT_PAST_EVENTS_YEARS = 100
 
@@ -140,7 +141,7 @@ export class CalendarView implements CurrentView {
 	_currentViewType: CalendarViewTypeEnum
 	_hiddenCalendars: Set<Id>
 
-	_calendarInvitations: Array<ReceivedGroupInvitation>
+	_calendarInvitations: ReceivedGroupInvitationsModel
 
 	oncreate: Function;
 	onremove: Function;
@@ -152,6 +153,10 @@ export class CalendarView implements CurrentView {
 		this._eventsForDays = freezeMap(new Map())
 		this._hiddenCalendars = new Set(deviceConfig.getHiddenCalendars(userId))
 		this.selectedDate = stream(getStartOfDay(new Date()))
+
+		this._calendarInvitations = new ReceivedGroupInvitationsModel(GroupType.Calendar, locator.eventController, locator.entityClient, logins)
+		this._calendarInvitations.invitations.map(m.redraw.bind(m))
+		this._calendarInvitations.init()
 
 		this.sidebarColumn = new ViewColumn({
 				view: () => m(FolderColumnView, {
@@ -173,10 +178,10 @@ export class CalendarView implements CurrentView {
 							}
 						}, this._renderCalendars(false)),
 						m(SidebarSection, {label: "otherCalendars_label"}, this._renderCalendars(true)),
-						this._calendarInvitations.length > 0
+						this._calendarInvitations.invitations().length > 0
 							? m(SidebarSection, {
 								label: "calendarInvitations_label"
-							}, this._calendarInvitations.map((invitation) => m(GroupInvitationFolderRow, {invitation})))
+							}, this._calendarInvitations.invitations().map((invitation) => m(GroupInvitationFolderRow, {invitation})))
 							: null,
 					],
 					ariaLabel: "calendar_label"
@@ -287,9 +292,6 @@ export class CalendarView implements CurrentView {
 		const monitorHandle = locator.progressTracker.registerMonitor(totalWork)
 		let progressMonitor = neverNull(locator.progressTracker.getMonitor(monitorHandle))
 		this._calendarInfos = locator.calendarModel.loadOrCreateCalendarInfo(progressMonitor).tap(m.redraw)
-
-		this._calendarInvitations = []
-		this._updateCalendarInvitations()
 
 		this.selectedDate.map((d) => {
 			const previousMonthDate = new Date(d)
@@ -441,12 +443,6 @@ export class CalendarView implements CurrentView {
 			colors: ButtonColors.Header
 		})
 	}
-
-	_updateCalendarInvitations(): Promise<*> {
-		return loadReceivedGroupInvitations(logins.getUserController(), locator.entityClient, GroupType.Calendar)
-			.then(invitations => this._calendarInvitations = invitations)
-	}
-
 
 	handleBackButton(): boolean {
 		const route = m.route.get()
@@ -896,21 +892,6 @@ export class CalendarView implements CurrentView {
 							}
 						})
 					}
-				} else if (isUpdateForTypeRef(ReceivedGroupInvitationTypeRef, update)) {
-					if (update.operation === OperationType.CREATE) {
-						return load(ReceivedGroupInvitationTypeRef, [update.instanceListId, update.instanceId]).then(invitation => {
-							this._calendarInvitations.push(invitation)
-							m.redraw()
-						})
-					} else if (update.operation === OperationType.DELETE) {
-						const found = findAndRemove(this._calendarInvitations, (invitation) => {
-							return isSameId(invitation._id, [update.instanceListId, update.instanceId])
-						})
-						if (found) {
-							m.redraw()
-						}
-					}
-
 				} else if (isUpdateForTypeRef(GroupInfoTypeRef, update)) {
 					this._calendarInfos.then(calendarInfos => {
 						const calendarInfo = calendarInfos.get(eventOwnerGroupId) // ensure that it is a GroupInfo update for a calendar group.

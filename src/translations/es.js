@@ -159,7 +159,7 @@ export default {
 		"calendarRepeatStopCondition_label": "Termina",
 		"groupCapabilityInvite_label": "Escribir y administrar el uso compartido",
 		"groupCapabilityWrite_label": "Solo lectura",
-		"groupCapabilityWrite_label": "Lectura y escritura",
+		"groupCapabilityRead_label": "Lectura y escritura",
 		"calendarView_action": "Cambiar a la vista de calendario",
 		"calendar_label": "Calendario",
 		"callNumber_alt": "Llame a este número",

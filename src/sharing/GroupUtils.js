@@ -3,7 +3,7 @@
 import type {User} from "../api/entities/sys/User"
 import type {Group} from "../api/entities/sys/Group"
 import type {GroupTypeEnum, ShareCapabilityEnum} from "../api/common/TutanotaConstants"
-import {GroupType, groupTypeToString, ShareCapability} from "../api/common/TutanotaConstants"
+import {FeatureType, GroupType, groupTypeToString, ShareCapability} from "../api/common/TutanotaConstants"
 import type {GroupMembership} from "../api/entities/sys/GroupMembership"
 import {isSameId} from "../api/common/utils/EntityUtils"
 import type {TranslationKey} from "../misc/LanguageViewModel"
@@ -17,11 +17,11 @@ import {GroupMemberTypeRef} from "../api/entities/sys/GroupMember"
 import type {EntityClient} from "../api/common/EntityClient"
 import {promiseMap} from "../api/common/utils/PromiseUtils"
 import type {ReceivedGroupInvitation} from "../api/entities/sys/ReceivedGroupInvitation"
-import {load, loadAll} from "../api/main/Entity"
-import {UserGroupRootTypeRef} from "../api/entities/sys/UserGroupRoot"
 import {ReceivedGroupInvitationTypeRef} from "../api/entities/sys/ReceivedGroupInvitation"
+import {UserGroupRootTypeRef} from "../api/entities/sys/UserGroupRoot"
 import {NotFoundError} from "../api/common/error/RestError"
 import type {IUserController} from "../api/main/UserController"
+import type {Customer} from "../api/entities/sys/Customer"
 
 export function hasCapabilityOnGroup(user: User, group: Group, requiredCapability: ShareCapabilityEnum): boolean {
 	// TODO I guess we need to check this outside of whereever this was called?
@@ -50,7 +50,7 @@ export function getCapabilityText(capability: ?ShareCapabilityEnum): string {
 		case ShareCapability.Write:
 			return lang.get("groupCapabilityWrite_label")
 		case ShareCapability.Read:
-			return lang.get("groupCapabilityWrite_label")
+			return lang.get("groupCapabilityRead_label")
 		default:
 			return lang.get("comboBoxSelectionNone_msg")
 	}
@@ -128,4 +128,16 @@ export function getInvitationGroupType(invitation: ReceivedGroupInvitation): Gro
 	return invitation.groupType === null
 		? DEFAULT_GROUP_TYPE
 		: downcast(invitation.groupType)
+}
+
+export function groupRequiresBusinessFeature(groupType: GroupTypeEnum): boolean {
+	return groupType === GroupType.Template
+}
+
+/**
+ * Checks if the business feature is booked for the customer. Can be used without loading the last booking instance. This is required
+ * for non admin users because they are not allowed to access the bookings.
+ */
+export function isUsingBusinessFeatureAllowed(customer: Customer): boolean {
+	return !!customer.customizations.find(feature => feature.feature === FeatureType.BusinessFeatureEnabled)
 }

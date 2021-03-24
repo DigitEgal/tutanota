@@ -6,7 +6,7 @@ import {getCapabilityText} from "../GroupUtils"
 import {downcast} from "../../api/common/utils/Utils"
 import {getDisplayText} from "../../mail/model/MailUtils"
 import {ButtonN} from "../../gui/base/ButtonN"
-import {showGroupInvitationDialog} from "./GroupInvitationDialog"
+import {showGroupInvitationDialog} from "./ReceivedGroupInvitationDialog"
 import {Icons} from "../../gui/base/icons/Icons"
 import type {ReceivedGroupInvitation} from "../../api/entities/sys/ReceivedGroupInvitation"
 
