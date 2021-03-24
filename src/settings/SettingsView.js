@@ -56,11 +56,13 @@ import {createReceivedGroupInvitation} from "../api/entities/sys/ReceivedGroupIn
 import {downcast} from "../api/common/utils/Utils"
 import {getDisplayText} from "../mail/model/MailUtils"
 import {showGroupInvitationDialog} from "../sharing/view/GroupInvitationDialog"
-import {getCapabilityText} from "../sharing/GroupUtils"
+import {getCapabilityText, loadReceivedGroupInvitations} from "../sharing/GroupUtils"
 import type {TemplateGroupInstance} from "../templates/model/TemplateGroupModel"
 import {showGroupSharingDialog} from "../sharing/view/GroupSharingDialog"
 import {moreButton} from "../gui/base/GuiUtils"
 import {flat} from "../api/common/utils/ArrayUtils"
+import {GroupInvitationFolderRow} from "../sharing/view/GroupInvitationFolderRow"
+import {SidebarSection} from "../gui/SidebarSection"
 
 assertMainOrNode()
 
@@ -155,9 +157,9 @@ export class SettingsView implements CurrentView {
 			})
 		}
 
-		this._templateGroupInvitations = [
-			createReceivedGroupInvitation({sharedGroupName: "test group shared group name!"})
-		]
+		this._templateGroupInvitations = []
+		loadReceivedGroupInvitations(logins.getUserController(), locator.entityClient, GroupType.Template)
+			.then(invitations => this._templateGroupInvitations = invitations)
 
 		this._settingsFoldersColumn = new ViewColumn({
 			view: () => {
@@ -188,19 +190,20 @@ export class SettingsView implements CurrentView {
 										moreButton([
 											{
 												label: "sharing_label",
-												click: () => // TODO
+												click: () => // TODO Translate
 													showGroupSharingDialog(folder.data.groupInfo, true, {
-														defaultGroupName: "string",
-														shareEmailSubject: "string",
-														shareEmailBody: (groupName: string, sharer: string) => "string",
-														addMemberMessage: (groupName: string) => "string",
-														removeMemberMessage: (groupName: string, member: string) => "string",
+														defaultGroupName: "PUT TEXT HERE",
+														shareEmailSubject: "PUT TEXT HERE",
+														shareEmailBody: (groupName: string, sharer: string) => "PUT TEXT HERE",
+														addMemberMessage: (groupName: string) => "PUT TEXT HERE",
+														removeMemberMessage: (groupName: string, member: string) => "PUT TEXT HERE",
 													}),
 											}
 										])
 									])
 								}),
-								this._renderTemplateGroupInvitations()
+								m(SidebarSection, {label: () => "Template Invitations"}, // TODO Translate
+									this._templateGroupInvitations.map(invitation => m(GroupInvitationFolderRow, {invitation})))
 							]),
 						hasTemplates
 							? m(FolderExpander, {
@@ -415,31 +418,6 @@ export class SettingsView implements CurrentView {
 					() => Icons.Folder,
 					`knowledgeBase-${groupInstance.groupInfo.name}`,
 					() => new KnowledgeBaseListView(this, locator.entityClient, groupInstance.groupRoot)))
-	}
-
-	_renderTemplateGroupInvitations(): Children {
-		return this._templateGroupInvitations
-		           .map((invitation) => [
-				           m(".folder-row.flex-start.plr-l", [
-					           m(".flex-v-center.flex-grow.button-height", {
-						           style: {
-							           // It's kinda hard to tell this element to not eat up all the row and truncate text instead because it
-							           // is vertical flex. With this it will stop at 80% of what it could be and that's enough for the button.
-							           "max-width": `calc(100% - ${size.button_height}px)`
-						           }
-					           }, [
-						           m(".b.text-ellipsis", {title: getCapabilityText(downcast(invitation.capability))}, invitation.sharedGroupName),
-						           m(".small.text-ellipsis", {title: invitation.inviterMailAddress},
-							           (getDisplayText(invitation.inviterName, invitation.inviterMailAddress, true)))
-					           ]),
-					           m(ButtonN, {
-						           label: "show_action",
-						           click: () => showGroupInvitationDialog(invitation),
-						           icon: () => Icons.Eye
-					           })
-				           ])
-			           ]
-		           )
 	}
 }
 

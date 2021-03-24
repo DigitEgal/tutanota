@@ -90,9 +90,17 @@ import {exportCalendar, showCalendarImportDialog} from "../export/CalendarImport
 import {createCalendarEventViewModel} from "../CalendarEventViewModel"
 import {showNotAvailableForFreeDialog} from "../../misc/SubscriptionDialogs"
 import {showGroupInvitationDialog} from "../../sharing/view/GroupInvitationDialog"
-import {getGroupName, getCapabilityText, hasCapabilityOnGroup, loadGroupMembers} from "../../sharing/GroupUtils"
+import {
+	getGroupName,
+	getCapabilityText,
+	hasCapabilityOnGroup,
+	loadGroupMembers,
+	loadReceivedGroupInvitations
+} from "../../sharing/GroupUtils"
 import {showGroupSharingDialog} from "../../sharing/view/GroupSharingDialog"
 import {moreButton} from "../../gui/base/GuiUtils"
+import {GroupInvitationFolderRow} from "../../sharing/view/GroupInvitationFolderRow"
+import {SidebarSection} from "../../gui/SidebarSection"
 
 export const LIMIT_PAST_EVENTS_YEARS = 100
 
@@ -155,15 +163,20 @@ export class CalendarView implements CurrentView {
 						},
 					content: [
 						this._renderCalendarViewButtons(),
-						this._renderSidebarSection("yourCalendars_label", {
-							label: "addCalendar_action",
-							colors: ButtonColors.Nav,
-							click: () => this._onPressedAddCalendar(),
-							icon: () => Icons.Add
+						m(SidebarSection, {
+							label: "yourCalendars_label",
+							buttonAttrs: {
+								label: "addCalendar_action",
+								colors: ButtonColors.Nav,
+								click: () => this._onPressedAddCalendar(),
+								icon: () => Icons.Add
+							}
 						}, this._renderCalendars(false)),
-						this._renderSidebarSection("otherCalendars_label", null, this._renderCalendars(true)),
+						m(SidebarSection, {label: "otherCalendars_label"}, this._renderCalendars(true)),
 						this._calendarInvitations.length > 0
-							? this._renderSidebarSection("calendarInvitations_label", null, this._renderCalendarInvitations())
+							? m(SidebarSection, {
+								label: "calendarInvitations_label"
+							}, this._calendarInvitations.map((invitation) => m(GroupInvitationFolderRow, {invitation})))
 							: null,
 					],
 					ariaLabel: "calendar_label"
@@ -381,17 +394,6 @@ export class CalendarView implements CurrentView {
 		}
 	}
 
-	_renderSidebarSection(label: TranslationKey, button: ?ButtonAttrs, content: Children): Children {
-		return m(".folders", {style: {color: theme.navigation_button}}, [
-			m(".folder-row.flex-space-between.button-height.plr-l", [
-				m("small.b.align-self-center.ml-negative-xs",
-					lang.get(label).toLocaleUpperCase()),
-				button ? m(ButtonN, button) : null
-			]),
-			content
-		])
-	}
-
 	_renderCalendarViewButtons(): Children {
 		const calendarViewValues = [
 			{name: lang.get("month_label"), value: CalendarViewType.MONTH, icon: Icons.Table, href: "/calendar/month"},
@@ -440,16 +442,9 @@ export class CalendarView implements CurrentView {
 		})
 	}
 
-	_updateCalendarInvitations(): Promise<void> {
-		return load(UserGroupRootTypeRef, logins.getUserController().userGroupInfo.group).then(userGroupRoot => {
-			return loadAll(ReceivedGroupInvitationTypeRef, userGroupRoot.invitations).then(calendarInvitations => {
-				this._calendarInvitations = calendarInvitations
-				m.redraw()
-			})
-		}).catch(NotFoundError, (e) => {
-			// user doesn't have UserGroupRoot, only created when receiving calendar invitations, so this is empty.
-			this._calendarInvitations = []
-		})
+	_updateCalendarInvitations(): Promise<*> {
+		return loadReceivedGroupInvitations(logins.getUserController(), locator.entityClient, GroupType.Calendar)
+			.then(invitations => this._calendarInvitations = invitations)
 	}
 
 
@@ -499,32 +494,6 @@ export class CalendarView implements CurrentView {
 			      })
 		}, "save_action")
 	}
-
-	_renderCalendarInvitations(): Children {
-		return this._calendarInvitations
-		           .map((invitation) => [
-				           m(".folder-row.flex-start.plr-l", [
-					           m(".flex-v-center.flex-grow.button-height", {
-						           style: {
-							           // It's kinda hard to tell this element to not eat up all the row and truncate text instead because it
-							           // is vertical flex. With this it will stop at 80% of what it could be and that's enough for the button.
-							           "max-width": `calc(100% - ${size.button_height}px)`
-						           }
-					           }, [
-						           m(".b.text-ellipsis", {title: getCapabilityText(downcast(invitation.capability))}, invitation.sharedGroupName),
-						           m(".small.text-ellipsis", {title: invitation.inviterMailAddress},
-							           (getDisplayText(invitation.inviterName, invitation.inviterMailAddress, true)))
-					           ]),
-					           m(ButtonN, {
-						           label: "show_action",
-						           click: () => showGroupInvitationDialog(invitation),
-						           icon: () => Icons.Eye
-					           })
-				           ])
-			           ]
-		           )
-	}
-
 
 	_renderCalendars(shared: boolean): Children {
 		return this._calendarInfos.isFulfilled() ?
