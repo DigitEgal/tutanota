@@ -18,6 +18,7 @@ import stream from "mithril/stream/stream.js"
 import {showBuyDialog} from "../subscription/BuyDialog"
 import {PreconditionFailedError} from "../api/common/error/RestError"
 import {showBusinessFeatureRequiredDialog} from "../misc/SubscriptionDialogs"
+import {TemplateGroupPreconditionFailedReason} from "../sharing/GroupUtils"
 
 assertMainOrNode()
 
@@ -111,7 +112,7 @@ function addTemplateGroup(name: string): Promise<boolean> {
 		worker.createTemplateGroup(name)
 		      .then(() => true)
 		      .catch(PreconditionFailedError, (e) => {
-			      if (e.data === BUSINESS_FEATURE_REQUIRED) {
+			      if (e.data === TemplateGroupPreconditionFailedReason.BUSINESS_FEATURE_REQUIRED) {
 				      showBusinessFeatureRequiredDialog("businessFeatureRequiredGeneral_msg")
 			      } else {
 				      Dialog.error(() => e.message)

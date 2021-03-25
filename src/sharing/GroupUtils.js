@@ -23,11 +23,17 @@ import {NotFoundError} from "../api/common/error/RestError"
 import type {IUserController} from "../api/main/UserController"
 import type {Customer} from "../api/entities/sys/Customer"
 
+/**
+ * Whether or not a user has a given capability for a shared group. If the group type is not shareable, this will always return false
+ * @param user
+ * @param group
+ * @param requiredCapability
+ * @returns {boolean}
+ */
 export function hasCapabilityOnGroup(user: User, group: Group, requiredCapability: ShareCapabilityEnum): boolean {
-	// TODO I guess we need to check this outside of whereever this was called?
-	// if (group.type !== GroupType.Calendar) {
-	// 	return false
-	// }
+	if (!isShareableGroupType(downcast(group.type))) {
+		return false
+	}
 
 	if (isSharedGroupOwner(group, user._id)) {
 		return true;
@@ -141,3 +147,12 @@ export function groupRequiresBusinessFeature(groupType: GroupTypeEnum): boolean 
 export function isUsingBusinessFeatureAllowed(customer: Customer): boolean {
 	return !!customer.customizations.find(feature => feature.feature === FeatureType.BusinessFeatureEnabled)
 }
+
+export function isShareableGroupType(groupType: GroupTypeEnum): boolean {
+	// Should be synchronised with GroupType::isShareableGroup in tutadb
+	return groupType === GroupType.Calendar || groupType === GroupType.Template
+}
+
+export const TemplateGroupPreconditionFailedReason = Object.freeze({
+	BUSINESS_FEATURE_REQUIRED: "templategroup.business_feature_required"
+})

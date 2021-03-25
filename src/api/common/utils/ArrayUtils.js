@@ -116,7 +116,7 @@ export function mapAndFilterNullAsync<T, R>(array: Array<T>, mapper: mapper<T, $
 	return Promise.all(array.map(mapper)).then(downcast(filterNull))
 }
 
-export function filterNull<T>(array: Array<?T>): Array<T> {
+export function filterNull<T>(array: $ReadOnlyArray<?T>): Array<T> {
 	return downcast(array.filter(item => item != null))
 }
 

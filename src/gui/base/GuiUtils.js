@@ -29,14 +29,14 @@ export function createCountryDropdown(selectedCountry: Stream<?Country>, helpLab
 	return countryInput
 }
 
-export function moreButton(lazyChildren: MaybeLazy<$Promisable<$ReadOnlyArray<DropdownChildAttrs>>>): Children {
+export function moreButton(lazyChildren: MaybeLazy<$Promisable<$ReadOnlyArray<?DropdownChildAttrs>>>): Children {
 	return m(ButtonN, attachDropdown({
 		label: "more_label",
 		colors: ButtonColors.Nav,
 		click: noOp,
 		icon: () => Icons.More
 	}, mapLazily(lazyChildren, children => promiseMap(children,
-		child => typeof child === "string"
+		child => typeof child === "string" || child === null
 			? child
 			// If type hasn't been bound on the child it get's set to Dropdown, otherwise we use what is already there
 			: Object.assign({}, {type: ButtonType.Dropdown}, child))

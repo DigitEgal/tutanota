@@ -13,7 +13,7 @@ import {MailSettingsViewer} from "./MailSettingsViewer"
 import {UserListView} from "./UserListView"
 import type {User} from "../api/entities/sys/User"
 import {UserTypeRef} from "../api/entities/sys/User"
-import {load} from "../api/main/Entity"
+import {load, serviceRequestVoid} from "../api/main/Entity"
 import {Button} from "../gui/base/Button"
 import type {ButtonAttrs} from "../gui/base/ButtonN"
 import {ButtonColors} from "../gui/base/ButtonN"
@@ -43,7 +43,7 @@ import {AboutDialog} from "./AboutDialog"
 import {navButtonRoutes, SETTINGS_PREFIX} from "../misc/RouteChange"
 import {size} from "../gui/size"
 import {FolderColumnView} from "../gui/base/FolderColumnView"
-import {isSameId} from "../api/common/utils/EntityUtils";
+import {getEtId, isSameId} from "../api/common/utils/EntityUtils";
 import {TemplateListView} from "./TemplateListView"
 import {KnowledgeBaseListView} from "./KnowledgeBaseListView"
 import {promiseMap} from "../api/common/utils/PromiseUtils"
@@ -52,10 +52,17 @@ import {showAddTemplateGroupDialog} from "./AddGroupDialog"
 import type {TemplateGroupInstance} from "../templates/model/TemplateGroupModel"
 import {showGroupSharingDialog} from "../sharing/view/GroupSharingDialog"
 import {moreButton} from "../gui/base/GuiUtils"
-import { flat} from "../api/common/utils/ArrayUtils"
+import {flat} from "../api/common/utils/ArrayUtils"
 import {GroupInvitationFolderRow} from "../sharing/view/GroupInvitationFolderRow"
 import {SidebarSection} from "../gui/SidebarSection"
 import {ReceivedGroupInvitationsModel} from "../sharing/model/ReceivedGroupInvitationsModel"
+import {createTemplateGroupDeleteData} from "../api/entities/tutanota/TemplateGroupDeleteData"
+import {isSharedGroupOwner, TemplateGroupPreconditionFailedReason} from "../sharing/GroupUtils"
+import {SysService} from "../api/entities/sys/Services"
+import {HttpMethod} from "../api/common/EntityFunctions"
+import {TutanotaService} from "../api/entities/tutanota/Services"
+import {PreconditionFailedError} from "../api/common/error/RestError"
+import {showProgressDialog} from "../gui/ProgressDialog"
 
 assertMainOrNode()
 
@@ -168,24 +175,7 @@ export class SettingsView implements CurrentView {
 								buttonAttrs: addTemplateGroupButtonAttrs,
 							},
 							[
-								this._templateFolders.map(folder => {
-									return m(".folder-row.plr-l.flex.flex-row", [
-										m(NavButtonN, this._createSettingsFolderNavButton(folder)),
-										moreButton([
-											{
-												label: "sharing_label",
-												click: () => // TODO Translate
-													showGroupSharingDialog(folder.data.groupInfo, true, {
-														defaultGroupName: "PUT TEXT HERE",
-														shareEmailSubject: "PUT TEXT HERE",
-														shareEmailBody: (groupName: string, sharer: string) => "PUT TEXT HERE",
-														addMemberMessage: (groupName: string) => "PUT TEXT HERE",
-														removeMemberMessage: (groupName: string, member: string) => "PUT TEXT HERE",
-													}),
-											}
-										])
-									])
-								}),
+								this._templateFolders.map(folder => this._createTemplateFolderRow(folder)),
 								hasTemplateInvitations
 									? m(SidebarSection, {
 										// TODO Translate
@@ -240,6 +230,40 @@ export class SettingsView implements CurrentView {
 			click: () => this.viewSlider.focus(this._settingsColumn),
 			isVisible: () => folder.isVisible()
 		}
+	}
+
+	_createTemplateFolderRow(folder: SettingsFolder<TemplateGroupInstance>): Children {
+		return m(".folder-row.plr-l.flex.flex-row", [
+			m(NavButtonN, this._createSettingsFolderNavButton(folder)),
+			moreButton([
+				isSharedGroupOwner(folder.data.userGroup, getEtId(logins.getUserController().user))
+					? {
+						label: "delete_action",
+						click: () => {
+							// TODO Translate
+							Dialog.confirm(() => "Are you sure you to delete this template group? all of the templates will be lost (forever)")
+							      .then(doDelete => {
+								      if (doDelete) {
+									      const deleteData = createTemplateGroupDeleteData({group: folder.data.groupInfo.group})
+									      showProgressDialog("pleaseWait_msg",
+										      serviceRequestVoid(TutanotaService.TemplateGroupService, HttpMethod.DELETE, deleteData))
+								      }
+							      })
+						}
+					} : null,
+				{
+					label: "sharing_label",
+					click: () => // TODO Translate
+						showGroupSharingDialog(folder.data.groupInfo, true, {
+							defaultGroupName: "PUT TEXT HERE",
+							shareEmailSubject: "PUT TEXT HERE",
+							shareEmailBody: (groupName: string, sharer: string) => "PUT TEXT HERE",
+							addMemberMessage: (groupName: string) => "PUT TEXT HERE",
+							removeMemberMessage: (groupName: string, member: string) => "PUT TEXT HERE",
+						}),
+				}
+			])
+		])
 	}
 
 	_createSidebarSectionChildren(folders: SettingsFolder<void>[]): Children {
@@ -404,7 +428,7 @@ export class SettingsView implements CurrentView {
 				new SettingsFolder(() => groupInstance.groupInfo.name,
 					() => Icons.Folder,
 					`knowledgeBase-${groupInstance.groupInfo.name}`,
-					() => new KnowledgeBaseListView(this, locator.entityClient, groupInstance.groupRoot)))
+					() => new KnowledgeBaseListView(this, locator.entityClient, logins, groupInstance.groupRoot, groupInstance.userGroup)))
 	}
 }
 

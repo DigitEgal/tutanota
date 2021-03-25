@@ -17,6 +17,7 @@ import stream from "mithril/stream/stream.js"
 import type {PosRect} from "./Dropdown"
 import {Keys} from "../../api/common/TutanotaConstants"
 import {newMouseEvent} from "../HtmlUtils"
+import {filterNull} from "../../api/common/utils/ArrayUtils"
 
 assertMainOrNode()
 
@@ -40,7 +41,7 @@ export class DropdownN {
 	_isFilterable: boolean;
 
 
-	constructor(lazyChildren: lazy<$ReadOnlyArray<DropdownChildAttrs>>, width: number) {
+	constructor(lazyChildren: lazy<$ReadOnlyArray<?DropdownChildAttrs>>, width: number) {
 		this.children = []
 		this.maxHeight = 0
 		this._width = width
@@ -48,7 +49,7 @@ export class DropdownN {
 		this._filterString = stream("")
 
 		this.oninit = () => {
-			this.children = lazyChildren()
+			this.children = filterNull(lazyChildren())
 			this._isFilterable = this.children.length > 10
 			this.children.map(child => {
 				if (typeof child === 'string') {
@@ -290,7 +291,7 @@ export function createDropdown(lazyButtons: lazy<$ReadOnlyArray<DropdownChildAtt
 
 const importBase = typeof module !== "undefined" ? module.id : __moduleName
 
-export function createAsyncDropdown(lazyButtons: lazyAsync<$ReadOnlyArray<DropdownChildAttrs>>, width: number = 200): clickHandler {
+export function createAsyncDropdown(lazyButtons: lazyAsync<$ReadOnlyArray<?DropdownChildAttrs>>, width: number = 200): clickHandler {
 	// not all browsers have the actual button as e.currentTarget, but all of them send it as a second argument (see https://github.com/tutao/tutanota/issues/1110)
 	return ((e, dom) => {
 		let originalButtons = lazyButtons()
@@ -334,7 +335,7 @@ export type DropdownButtonAttrs = $Rest<ButtonAttrs, {click?: clickHandler}>
  */
 export function attachDropdown(
 	mainButtonAttrs: DropdownButtonAttrs,
-	childAttrs: lazy<$Promisable<$ReadOnlyArray<DropdownChildAttrs>>>,
+	childAttrs: lazy<$Promisable<$ReadOnlyArray<?DropdownChildAttrs>>>,
 	showDropdown?: lazy<boolean> = () => true,
 	width?: number): ButtonAttrs {
 

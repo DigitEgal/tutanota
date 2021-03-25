@@ -5,8 +5,7 @@ import type {KnowledgeBaseEntry} from "../api/entities/tutanota/KnowledgeBaseEnt
 import {EntityClient} from "../api/common/EntityClient"
 import type {EntityUpdateData} from "../api/main/EventController"
 import type {ButtonAttrs} from "../gui/base/ButtonN"
-import {ButtonType} from "../gui/base/ButtonN"
-import {ButtonN} from "../gui/base/ButtonN"
+import {ButtonN, ButtonType} from "../gui/base/ButtonN"
 import {Icons} from "../gui/base/icons/Icons"
 import {Dialog} from "../gui/base/Dialog"
 import {memoized, neverNull} from "../api/common/utils/Utils"
@@ -22,10 +21,12 @@ import {TemplateGroupRootTypeRef} from "../api/entities/tutanota/TemplateGroupRo
 
 export class KnowledgeBaseDetailsViewer {
 	view: Function
+	isReadOnly: lazy<boolean>
 	_entityClient: EntityClient
 	_sanitizedEntry: (KnowledgeBaseEntry) => {content: string}
 
-	constructor(entry: KnowledgeBaseEntry, entityClient: EntityClient) {
+	constructor(entry: KnowledgeBaseEntry, entityClient: EntityClient, isReadOnly: lazy<boolean>) {
+		this.isReadOnly = isReadOnly
 		this._entityClient = entityClient
 		this._sanitizedEntry = memoized((entry) => {
 			return {
@@ -64,13 +65,15 @@ export class KnowledgeBaseDetailsViewer {
 					this._handleAnchorClick(event)
 				}
 			}, [
-				m(".flex.mt-l.center-vertically", [
-					m(".h4.text-ellipsis", entry.title),
-					m(".flex.flex-grow.justify-end", [
-						m(ButtonN, EditButtonAttrs),
-						m(ButtonN, RemoveButtonAttrs)
+				!this.isReadOnly()
+					? m(".flex.mt-l.center-vertically", [
+						m(".h4.text-ellipsis", entry.title),
+						m(".flex.flex-grow.justify-end", [
+							m(ButtonN, EditButtonAttrs),
+							m(ButtonN, RemoveButtonAttrs)
+						])
 					])
-				]),
+					: null,
 				m("", [
 					m(".h5.mt-s", lang.get("keywords_label")),
 					m(".flex.mt-s.wrap", [

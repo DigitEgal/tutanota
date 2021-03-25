@@ -16,6 +16,10 @@ import {EntityClient} from "../api/common/EntityClient"
 import {showKnowledgeBaseEditor} from "./KnowledgeBaseEditor"
 import {isSameId} from "../api/common/utils/EntityUtils"
 import {assertMainOrNode} from "../api/common/Env"
+import {hasCapabilityOnGroup} from "../sharing/GroupUtils"
+import {ShareCapability} from "../api/common/TutanotaConstants"
+import type {LoginController} from "../api/main/LoginController"
+import type {Group} from "../api/entities/sys/Group"
 
 assertMainOrNode()
 
@@ -28,12 +32,16 @@ export class KnowledgeBaseListView implements UpdatableSettingsViewer {
 	_listId: ?Id
 	_settingsView: SettingsView
 	_templateGroupRoot: TemplateGroupRoot
+	_userGroup: Group
 	_entityClient: EntityClient
+	_logins: LoginController
 
-	constructor(settingsView: SettingsView, entityClient: EntityClient, templateGroupRoot: TemplateGroupRoot) {
+	constructor(settingsView: SettingsView, entityClient: EntityClient, logins: LoginController, templateGroupRoot: TemplateGroupRoot, userGroup: Group) {
 		this._settingsView = settingsView
 		this._entityClient = entityClient
+		this._logins = logins
 		this._templateGroupRoot = templateGroupRoot
+		this._userGroup = userGroup
 		this._initKnowledgeBaseList()
 	}
 
@@ -54,7 +62,7 @@ export class KnowledgeBaseListView implements UpdatableSettingsViewer {
 			},
 			elementSelected: (entries: Array<KnowledgeBaseEntry>, elementClicked) => {
 				if (elementClicked) {
-					this._settingsView.detailsViewer = new KnowledgeBaseDetailsViewer(entries[0], this._entityClient)
+					this._settingsView.detailsViewer = new KnowledgeBaseDetailsViewer(entries[0], this._entityClient, () => !this.userCanEdit())
 					this._settingsView.focusSettingsDetailsColumn()
 				} else if (entries.length === 0 && this._settingsView.detailsViewer) {
 					this._settingsView.detailsViewer = null
@@ -87,13 +95,15 @@ export class KnowledgeBaseListView implements UpdatableSettingsViewer {
 	view(): Children {
 		return m(".flex.flex-column.fill-absolute", [
 			m(".flex.flex-column.justify-center.plr-l.list-border-right.list-bg.list-header",
-				m(".mr-negative-s.align-self-end", m(ButtonN, {
-					label: "addEntry_label",
-					type: ButtonType.Primary,
-					click: () => {
-						showKnowledgeBaseEditor(null, this._templateGroupRoot)
-					}
-				}))
+				this.userCanEdit()
+					? m(".mr-negative-s.align-self-end", m(ButtonN, {
+						label: "addEntry_label",
+						type: ButtonType.Primary,
+						click: () => {
+							showKnowledgeBaseEditor(null, this._templateGroupRoot)
+						}
+					}))
+					: null
 			),
 			m(".rel.flex-grow", this._list ? m(this._list) : null)
 		])
@@ -110,6 +120,10 @@ export class KnowledgeBaseListView implements UpdatableSettingsViewer {
 			this._settingsView.detailsViewer = null
 			m.redraw()
 		})
+	}
+
+	userCanEdit(): boolean {
+		return hasCapabilityOnGroup(this._logins.getUserController().user, this._userGroup, ShareCapability.Write)
 	}
 }
 
@@ -142,4 +156,5 @@ export class KnowledgeBaseRow {
 			]),
 		]
 	}
+
 }

@@ -63,7 +63,7 @@ export class TemplateListView implements UpdatableSettingsViewer {
 			},
 			elementSelected: (templates: Array<EmailTemplate>, elementClicked) => {
 				if (elementClicked) {
-					this._settingsView.detailsViewer = new TemplateDetailsViewer(templates[0], this._entityClient)
+					this._settingsView.detailsViewer = new TemplateDetailsViewer(templates[0], this._entityClient, () => !this.userCanEdit())
 					this._settingsView.focusSettingsDetailsColumn()
 				} else if (templates.length === 0 && this._settingsView.detailsViewer) {
 					this._settingsView.detailsViewer = null
@@ -99,7 +99,8 @@ export class TemplateListView implements UpdatableSettingsViewer {
 		const entityClient = this._entityClient
 		return m(".flex.flex-column.fill-absolute", [
 			m(".flex.flex-column.justify-center.plr-l.list-border-right.list-bg.list-header",
-				m(".flex.flex-end.center-vertically", [
+				this.userCanEdit()
+					? m(".flex.flex-end.center-vertically", [
 						m(".mr-negative-s", m("input[type=file][name=test]", {
 							onchange: function () {
 								const reader = new FileReader()
@@ -116,10 +117,9 @@ export class TemplateListView implements UpdatableSettingsViewer {
 							click: () => {
 								showTemplateEditor(null, this._groupInstance.groupRoot)
 							},
-							isVisible: () => hasCapabilityOnGroup(this._logins.getUserController().user, this._groupInstance.userGroup, ShareCapability.Write)
 						})),
-					]
-				)),
+					])
+					: null),
 			m(".rel.flex-grow", this._list ? m(this._list) : null)
 		])
 	}
@@ -134,6 +134,10 @@ export class TemplateListView implements UpdatableSettingsViewer {
 			this._settingsView.detailsViewer = null
 			m.redraw()
 		})
+	}
+
+	userCanEdit(): boolean {
+		return hasCapabilityOnGroup(this._logins.getUserController().user, this._groupInstance.userGroup, ShareCapability.Write)
 	}
 }
 

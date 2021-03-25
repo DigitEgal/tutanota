@@ -6,8 +6,8 @@ import {neverNull} from "../api/common/utils/Utils"
 import type {TextFieldAttrs} from "../gui/base/TextFieldN"
 import {TextFieldN} from "../gui/base/TextFieldN"
 import type {EntityUpdateData} from "../api/main/EventController"
-import {ButtonN, ButtonType} from "../gui/base/ButtonN"
 import type {ButtonAttrs} from "../gui/base/ButtonN"
+import {ButtonN, ButtonType} from "../gui/base/ButtonN"
 import {Icons} from "../gui/base/icons/Icons"
 import {getLanguageCode} from "./TemplateEditorModel"
 import {showTemplateEditor} from "./TemplateEditor"
@@ -21,10 +21,12 @@ import {HtmlEditor} from "../gui/editor/HtmlEditor"
 import {TEMPLATE_SHORTCUT_PREFIX} from "../templates/model/TemplateModel"
 
 export class TemplateDetailsViewer {
+	isReadOnly: lazy<boolean>
 	view: Function
 	_templateContentEditor: HtmlEditor
 
-	constructor(template: EmailTemplate, entityClient: EntityClient) {
+	constructor(template: EmailTemplate, entityClient: EntityClient, isReadOnly: lazy<boolean>) {
+		this.isReadOnly = isReadOnly
 		const tagAttrs: TextFieldAttrs = {
 			label: "shortcut_label",
 			value: stream(TEMPLATE_SHORTCUT_PREFIX + neverNull(template.tag)),
@@ -59,14 +61,15 @@ export class TemplateDetailsViewer {
 			return m("#user-viewer.fill-absolute.scroll.plr-l.pb-floating", [
 				m(".flex.mt-l.center-vertically", [
 					m(".h4.text-ellipsis", template.title),
-					m(".flex.flex-grow.justify-end", [
-						m(ButtonN, EditButtonAttrs),
-						m(ButtonN, RemoveButtonAttrs),
-					])
+					!this.isReadOnly()
+						? m(".flex.flex-grow.justify-end", [
+							m(ButtonN, EditButtonAttrs),
+							m(ButtonN, RemoveButtonAttrs),
+						])
+						: null
 				]),
 				m("", [
 					m(TextFieldN, tagAttrs),
-
 					template.contents.map(emailTemplateContent => {
 						const language = languageByCode[getLanguageCode(emailTemplateContent)]
 						return m(".flex.flex-column", [
