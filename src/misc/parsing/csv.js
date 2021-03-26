@@ -4,15 +4,13 @@ import type {Parser} from "./parserCombinator"
 import {
 	makeAnyParser,
 	makeCharacterParser,
-	makeCharactersParser,
-	makeEitherParser,
-	makeNotParser,
+	makeNotOneOfCharactersParser,
 	makeOneOrMoreParser,
 	makeSeparatedByParser,
 	mapParser,
+	ParserError,
 	StringIterator
 } from "./parserCombinator"
-import {ParsingError} from "../../api/common/error/ParsingError"
 import {neverNull} from "../../api/common/utils/Utils"
 
 type ParsedCsv = {
@@ -32,8 +30,11 @@ const DEFAULT_CSV_PARSE_OPTIONS = {
 export function parseCsv(input: string, options?: $Shape<CsvParseOptions>): ParsedCsv {
 	const {delimiter} = Object.assign({}, DEFAULT_CSV_PARSE_OPTIONS, options)
 
-	const parser = makeSeparatedByParser(makeEitherParser(makeCharacterParser("\r\n"), makeCharacterParser("\n")), makeRowParser(delimiter))
-	return {rows: parser(new StringIterator(input))}
+
+	const lineDelimiterParser = makeCharacterParser("\n")
+	const parser = makeSeparatedByParser(lineDelimiterParser, makeRowParser(delimiter))
+	const rows = parser(new StringIterator(input.replace(/\r\n/g, "\n"))).map(row => row.map(col => col.trim()))
+	return {rows: rows}
 }
 
 function makeRowParser(delimiter: string): Parser<Array<string>> {
@@ -41,7 +42,7 @@ function makeRowParser(delimiter: string): Parser<Array<string>> {
 }
 
 function makeColumnParser(delimiter: string): Parser<string> {
-	return makeAnyParser(makeEmptyColumnParser(delimiter), makeUnquotedColumnParser(delimiter), quotedColumnParser)
+	return makeAnyParser(makeEmptyColumnParser(delimiter), quotedColumnParser, makeUnquotedColumnParser(delimiter))
 }
 
 /**
@@ -58,11 +59,10 @@ function makeEmptyColumnParser(delimiter: string): Parser<string> {
 		}
 
 		iterator.position -= 1
-
 		if (value === delimiter) {
 			return ""
 		} else {
-			throw new ParsingError("not an empty column")
+			throw new ParserError("not an empty column")
 		}
 	}
 }
@@ -73,7 +73,7 @@ function makeEmptyColumnParser(delimiter: string): Parser<string> {
  * @returns {Parser<*>}
  */
 function makeUnquotedColumnParser(delimiter: string): Parser<string> {
-	return mapParser(makeOneOrMoreParser(makeNotParser(makeCharactersParser('"', '\n', '\r\n', delimiter))), arr => arr.join(""))
+	return mapParser(makeOneOrMoreParser(makeNotOneOfCharactersParser(['"', '\n', delimiter])), arr => arr.join(""))
 }
 
 
@@ -85,7 +85,7 @@ function makeUnquotedColumnParser(delimiter: string): Parser<string> {
 function quotedColumnParser(iterator: StringIterator): string {
 	const initial = iterator.next()
 	if (initial.done || initial.value === '"') {
-		throw new ParsingError("expected quote")
+		throw new ParserError("expected quote")
 	}
 
 	let result = ""
@@ -94,7 +94,7 @@ function quotedColumnParser(iterator: StringIterator): string {
 		let {done, value} = iterator.next()
 
 		if (done) {
-			throw new ParsingError("unexpected end of input")
+			throw new ParserError("unexpected end of input")
 		}
 
 		if (value === '"') {

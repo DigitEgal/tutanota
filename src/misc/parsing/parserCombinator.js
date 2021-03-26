@@ -1,7 +1,6 @@
 //@flow
 import {downcast} from "../../api/common/utils/Utils"
 import {TutanotaError} from "../../api/common/error/TutanotaError"
-import {ProgrammingError} from "../../api/common/error/ProgrammingError"
 
 export type Parser<T> = (StringIterator) => T
 
@@ -35,33 +34,24 @@ export function makeCharacterParser(character: string): Parser<string> {
 	}
 }
 
-export function makeCharactersParser(first: string, ...rest: Array<string>): Parser<string> {
-	return makeAnyParser(makeCharacterParser(first), ...rest.map(makeCharacterParser))
-}
-
-/**
- * If parser succeeds then fail, if it fails, then return what it failed to parse
- * @param parser
- * @returns {function(StringIterator): (string|undefined)}
- */
-export function makeNotParser(parser: Parser<string>): Parser<string> {
+export function makeNotCharacterParser(character: string): Parser<string> {
 	return (iterator: StringIterator) => {
-		const iteratorStart = iterator.position
-		try {
-			parser(iterator)
-		} catch (e) {
-			if (e instanceof ParserError) {
-				const iteratorEnd = iterator.position
-				return iterator.iteratee.slice(iteratorStart, iteratorEnd)
-			}
-			throw e
+		let value = iterator.peek()
+		if (value !== character) {
+			iterator.next()
+			return value
 		}
-		throw new ParserError("expected parser not to parser, but it parsed")
+		const sliceStart = Math.max(iterator.position - 10, 0)
+		const sliceEnd = Math.min(iterator.position + 10, iterator.iteratee.length - 1)
+		throw new ParserError(`expected character ${character} got ${value} near ${iterator.iteratee.slice(sliceStart, sliceEnd)}`)
 	}
 }
 
+
 function makeZeroOrMoreParser<T>(anotherParser: Parser<T>): Parser<Array<T>> {
+
 	return (iterator: StringIterator) => {
+
 		const result = []
 		try {
 			let parseResult = anotherParser(iterator)
@@ -76,7 +66,9 @@ function makeZeroOrMoreParser<T>(anotherParser: Parser<T>): Parser<Array<T>> {
 }
 
 export function mapParser<T, R>(parser: Parser<T>, mapper: (T) => R): Parser<R> {
-	return (iterator: StringIterator) => mapper(parser(iterator))
+	return (iterator: StringIterator) => {
+		return mapper(parser(iterator))
+	}
 }
 
 export function makeOneOrMoreParser<T>(parser: Parser<T>): Parser<Array<T>> {
@@ -140,7 +132,7 @@ export function makeAnyParser<T>(first: Parser<T>, ...rest: Array<Parser<T>>): P
 }
 
 
-function makeOneOfCharactersParser(allowed: Array<string>): Parser<string> {
+export function makeOneOfCharactersParser(allowed: Array<string>): Parser<string> {
 	return (iterator: StringIterator) => {
 		const value = iterator.peek()
 		if (allowed.includes(value)) {
@@ -148,6 +140,21 @@ function makeOneOfCharactersParser(allowed: Array<string>): Parser<string> {
 			return value
 		}
 		throw new ParserError(`Expected one of ${String(allowed)}, got ${value}`)
+	}
+}
+
+
+export function makeNotOneOfCharactersParser(notAllowed: Array<string>): Parser<string> {
+	return (iterator: StringIterator) => {
+		const value = iterator.peek()
+		if (!value) {
+			throw new ParserError("unexpected end of input")
+		}
+		if (!notAllowed.includes(value)) {
+			iterator.next()
+			return value
+		}
+		throw new ParserError(`Expected not one of ${String(notAllowed)}, but got it`)
 	}
 }
 
