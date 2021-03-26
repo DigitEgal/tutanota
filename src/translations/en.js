@@ -1363,5 +1363,26 @@ export default {
 		"groupCapabilityInvite_label": "Write and manage sharing",
 		"groupCapabilityWrite_label": "Read and write",
 		"groupCapabilityRead_label": "Read only",
+		"leaveGroup_action": "Leave group",
+		"templateGroupInvitations_label": "Template invitations",
+		"confirmDeleteTemplateGroup_msg": "Are you sure you to delete this template group? All of the templates will be lost (forever)",
+		"confirmLeaveTemplateGroup_msg": "Are you sure you want to leave this template group? The owner will have to re-invite you",
+		"templateGroupParticipants_label": "Participants of template group \"{groupName}\"",
+		"templateSharingNotOrderedUser_msg": "To share a template group, you must have the sharing feature. Do you want to order it now?",
+		"templateSharingNotOrderedAdmin_msg": "To share a template group you have to order the sharing feature. Would you like to order it now?",
+		"alreadyTemplateGroupMember_msg": "You are already part of this template group. You'll have to remove yourself from the group before you can accept this invitation",
+
+		"acceptTemplateGroupEmailSubject_msg": "New template group member",
+		"acceptTemplateGroupEmailBody_msg": "Hello {recipientName}, <br/>{invitee} has joined your template group \"{groupName}\".<br/><br/>This is an automated message.",
+
+		"declineTemplateGroupEmailSubject_msg": "Template group invitation declined",
+		"declineTemplateGroupEmailBody_msg": "Hello {recipientName}, <br/>{invitee} has chosen not to join your template group \"{groupName}\".<br/><br/>This is an automated message.",
+
+		"shareTemplateGroupEmailSubject_msg": "Invitation to join an email template group",
+		"shareTemplateGroupEmailBody_msg": "Hello, <br/>{inviter} has invited you to user their template group \"{groupName}\". You can check the details of this invitation in settings, and choose to accept or decline it.<br/><br/>This is an automated message.",
+
+		"shareTemplateGroupWarning_msg": "All members of the template group will be able to see your name and main email address of your mailbox.",
+		"removeTemplateGroupMemberConfirm_msg": "Are you sure you want to remove {member} from the template group \"{groupName}\"?",
+
 	}
 }

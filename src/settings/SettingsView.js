@@ -43,7 +43,7 @@ import {AboutDialog} from "./AboutDialog"
 import {navButtonRoutes, SETTINGS_PREFIX} from "../misc/RouteChange"
 import {size} from "../gui/size"
 import {FolderColumnView} from "../gui/base/FolderColumnView"
-import {getEtId, isSameId} from "../api/common/utils/EntityUtils";
+import {getEtId, getId, isSameId} from "../api/common/utils/EntityUtils";
 import {TemplateListView} from "./TemplateListView"
 import {KnowledgeBaseListView} from "./KnowledgeBaseListView"
 import {promiseMap} from "../api/common/utils/PromiseUtils"
@@ -51,7 +51,7 @@ import {loadTemplateGroupInstances} from "../templates/model/TemplateModel"
 import {showAddTemplateGroupDialog} from "./AddGroupDialog"
 import type {TemplateGroupInstance} from "../templates/model/TemplateGroupModel"
 import {showGroupSharingDialog} from "../sharing/view/GroupSharingDialog"
-import {moreButton} from "../gui/base/GuiUtils"
+import {getConfirmation, moreButton} from "../gui/base/GuiUtils"
 import {flat} from "../api/common/utils/ArrayUtils"
 import {GroupInvitationFolderRow} from "../sharing/view/GroupInvitationFolderRow"
 import {SidebarSection} from "../gui/SidebarSection"
@@ -63,6 +63,7 @@ import {HttpMethod} from "../api/common/EntityFunctions"
 import {TutanotaService} from "../api/entities/tutanota/Services"
 import {PreconditionFailedError} from "../api/common/error/RestError"
 import {showProgressDialog} from "../gui/ProgressDialog"
+import {worker} from "../api/main/WorkerClient"
 
 assertMainOrNode()
 
@@ -141,12 +142,6 @@ export class SettingsView implements CurrentView {
 
 		this._selectedFolder = this._userFolders[0]
 
-		const addTemplateGroupButtonAttrs: ButtonAttrs = {
-			label: () => "Add template group", // TODO Translate
-			icon: () => Icons.Add,
-			click: () => showAddTemplateGroupDialog()
-		}
-
 		this._templateInvitations =
 			new ReceivedGroupInvitationsModel(GroupType.Template, locator.eventController, locator.entityClient, logins)
 		this._templateInvitations.invitations.map(m.redraw.bind(m))
@@ -172,14 +167,17 @@ export class SettingsView implements CurrentView {
 							: null,
 						m(SidebarSection, {
 								label: "template_label",
-								buttonAttrs: addTemplateGroupButtonAttrs,
+								buttonAttrs: {
+									label: "createTemplateGroup_msg",
+									icon: () => Icons.Add,
+									click: () => showAddTemplateGroupDialog()
+								},
 							},
 							[
 								this._templateFolders.map(folder => this._createTemplateFolderRow(folder)),
 								hasTemplateInvitations
 									? m(SidebarSection, {
-										// TODO Translate
-										label: () => "Template Invitations"
+										label: "templateGroupInvitations_label"
 									}, this._templateInvitations.invitations().map(invitation => m(GroupInvitationFolderRow, {invitation})))
 									: null
 							]),
@@ -233,34 +231,33 @@ export class SettingsView implements CurrentView {
 	}
 
 	_createTemplateFolderRow(folder: SettingsFolder<TemplateGroupInstance>): Children {
+		const isGroupOwner = isSharedGroupOwner(folder.data.userGroup, getEtId(logins.getUserController().user))
 		return m(".folder-row.plr-l.flex.flex-row", [
 			m(NavButtonN, this._createSettingsFolderNavButton(folder)),
 			moreButton([
-				isSharedGroupOwner(folder.data.userGroup, getEtId(logins.getUserController().user))
+				isGroupOwner
 					? {
 						label: "delete_action",
-						click: () => {
-							// TODO Translate
-							Dialog.confirm(() => "Are you sure you to delete this template group? all of the templates will be lost (forever)")
-							      .then(doDelete => {
-								      if (doDelete) {
-									      const deleteData = createTemplateGroupDeleteData({group: folder.data.groupInfo.group})
-									      showProgressDialog("pleaseWait_msg",
-										      serviceRequestVoid(TutanotaService.TemplateGroupService, HttpMethod.DELETE, deleteData))
-								      }
-							      })
-						}
-					} : null,
+						click: () =>
+							getConfirmation("confirmDeleteTemplateGroup_msg")
+								.confirmed(() => showProgressDialog("pleaseWait_msg",
+									serviceRequestVoid(TutanotaService.TemplateGroupService,
+										HttpMethod.DELETE,
+										createTemplateGroupDeleteData({group: folder.data.groupInfo.group})))),
+						icon: () => Icons.Trash
+					}
+					: {
+						label: "leaveGroup_action",
+						click: () =>
+							getConfirmation("confirmLeaveTemplateGroup_msg")
+								.confirmed(() => worker.removeUserFromGroup(getEtId(logins.getUserController().user), folder.data.groupInfo.group)),
+						icon: () => BootIcons.Logout
+					},
 				{
 					label: "sharing_label",
 					click: () => // TODO Translate
-						showGroupSharingDialog(folder.data.groupInfo, true, {
-							defaultGroupName: "PUT TEXT HERE",
-							shareEmailSubject: "PUT TEXT HERE",
-							shareEmailBody: (groupName: string, sharer: string) => "PUT TEXT HERE",
-							addMemberMessage: (groupName: string) => "PUT TEXT HERE",
-							removeMemberMessage: (groupName: string, member: string) => "PUT TEXT HERE",
-						}),
+						showGroupSharingDialog(folder.data.groupInfo, true),
+					icon: () => Icons.ContactImport
 				}
 			])
 		])
@@ -271,8 +268,6 @@ export class SettingsView implements CurrentView {
 			() => showUserImportDialog(this._customDomains.getLoaded()),
 			() => Icons.ContactImport
 		).setColors(ButtonColors.Nav)
-		const buttons = folders.map(folder => this._createSettingsFolderNavButton(folder))
-
 		return m("",
 			folders
 				.filter(folder => folder.isVisible())
@@ -414,7 +409,7 @@ export class SettingsView implements CurrentView {
 		return promiseMap(loadTemplateGroupInstances(templateMemberships, locator.entityClient),
 			groupInstance =>
 				new SettingsFolder(() => groupInstance.groupInfo.name,
-					() => Icons.Folder,
+					() => Icons.ListAlt,
 					`template-${groupInstance.groupInfo.name}`,
 					() => new TemplateListView(this, groupInstance, locator.entityClient, logins),
 					groupInstance))
@@ -426,7 +421,7 @@ export class SettingsView implements CurrentView {
 		return promiseMap(loadTemplateGroupInstances(templateMemberships, locator.entityClient),
 			groupInstance =>
 				new SettingsFolder(() => groupInstance.groupInfo.name,
-					() => Icons.Folder,
+					() => Icons.Book,
 					`knowledgeBase-${groupInstance.groupInfo.name}`,
 					() => new KnowledgeBaseListView(this, locator.entityClient, logins, groupInstance.groupRoot, groupInstance.userGroup)))
 	}

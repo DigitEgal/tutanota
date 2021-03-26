@@ -47,6 +47,7 @@ import {CancelledError} from "../error/CancelledError"
 import {FileOpenError} from "../error/FileOpenError"
 import {PermissionError} from "../error/PermissionError"
 import {FileNotFoundError} from "../error/FileNotFoundError"
+import {TutanotaError} from "../error/TutanotaError"
 
 export type DeferredObject<T> = {
 	resolve: (T) => void,
@@ -466,4 +467,16 @@ const ErrorNameToType = {
 	"android.content.ActivityNotFoundException": FileOpenError,
 	"de.tutao.tutanota.TutFileViewer": FileOpenError,
 	"NSURLErrorDomain": ConnectionError
+}
+
+export class AssertionFailedError extends TutanotaError {
+	constructor(message: string) {
+		super("AssertionFailed", `Assertion failed: ${message}`)
+	}
+}
+
+export function assert(assertion: MaybeLazy<boolean>, message: string = "") {
+	if (!resolveMaybeLazy(assertion)) {
+		throw new AssertionFailedError(message)
+	}
 }

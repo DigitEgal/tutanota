@@ -5,7 +5,7 @@ import stream from "mithril/stream/stream.js"
 import {Dialog, DialogType} from "../../gui/base/Dialog"
 import type {TableLineAttrs} from "../../gui/base/TableN"
 import {ColumnWidth, TableN} from "../../gui/base/TableN"
-import {downcast, neverNull} from "../../api/common/utils/Utils"
+import {assert, assertNotNull, downcast, neverNull} from "../../api/common/utils/Utils"
 import {Icons} from "../../gui/base/icons/Icons"
 import {lang} from "../../misc/LanguageViewModel"
 import {Bubble, BubbleTextField} from "../../gui/base/BubbleTextField"
@@ -25,10 +25,10 @@ import type {GroupInfo} from "../../api/entities/sys/GroupInfo"
 import type {Contact} from "../../api/entities/tutanota/Contact"
 import type {RecipientInfo} from "../../api/common/RecipientInfo"
 import {
-	getCapabilityText, getGroupLabelTranslationKey,
+	getCapabilityText,
 	getGroupName,
 	getMemberCabability,
-	hasCapabilityOnGroup,
+	hasCapabilityOnGroup, isShareableGroupType,
 	isSharedGroupOwner,
 } from "../GroupUtils"
 import {sendShareNotificationEmail} from "../GroupSharingUtils"
@@ -38,18 +38,18 @@ import {locator} from "../../api/main/MainLocator"
 import {worker} from "../../api/main/WorkerClient"
 import {UserError} from "../../api/main/UserError"
 import {showUserError} from "../../misc/ErrorHandlerImpl"
-
-export type GroupSharingDialogTexts = {
-	defaultGroupName: string,
-	shareEmailSubject: string,
-	shareEmailBody: (groupName: string, sharer: string) => string,
-	addMemberMessage: (groupName: string) => string,
-	removeMemberMessage: (groupName: string, member: string) => string,
-}
+import {getConfirmation} from "../../gui/base/GuiUtils"
+import {getTextsForGroupType} from "../GroupGuiUtils"
+import type {GroupSharingTexts} from "../GroupGuiUtils"
 
 export function showGroupSharingDialog(groupInfo: GroupInfo,
-                                       allowGroupNameOverride: boolean,
-                                       texts: GroupSharingDialogTexts) {
+                                       allowGroupNameOverride: boolean) {
+
+	const groupType = downcast(assertNotNull(groupInfo.groupType))
+	assert(isShareableGroupType(downcast(groupInfo.groupType)), `Group type "${groupType}" must be shareable`)
+
+	const texts = getTextsForGroupType(groupType)
+
 	showProgressDialog("loading_msg", GroupSharingModel.newAsync(groupInfo, locator.eventController, locator.entityClient, logins, worker))
 		.then(model => {
 			model.onEntityUpdate.map(m.redraw.bind(m))
@@ -75,7 +75,7 @@ export function showGroupSharingDialog(groupInfo: GroupInfo,
 type GroupSharingDialogAttrs = {
 	model: GroupSharingModel,
 	allowGroupNameOverride: boolean,
-	texts: GroupSharingDialogTexts
+	texts: GroupSharingTexts
 }
 
 class GroupSharingDialogContent implements MComponent<GroupSharingDialogAttrs> {
@@ -85,7 +85,7 @@ class GroupSharingDialogContent implements MComponent<GroupSharingDialogAttrs> {
 		const groupName = getGroupName(model.info, allowGroupNameOverride)
 		return m(".flex.col.pt-s", [
 			m(TableN, {
-				columnHeading: [() => lang.get("participants_label", {"{name}": groupName})],
+				columnHeading: [() => texts.participantsLabel(groupName)],
 				columnWidths: [ColumnWidth.Largest, ColumnWidth.Largest],
 				lines: this._renderMemberInfos(model, texts, groupName)
 				           .concat(this._renderGroupInvitations(model, texts, groupName)),
@@ -100,7 +100,7 @@ class GroupSharingDialogContent implements MComponent<GroupSharingDialogAttrs> {
 		])
 	}
 
-	_renderGroupInvitations(model: GroupSharingModel, texts: GroupSharingDialogTexts, groupName: string): Array<TableLineAttrs> {
+	_renderGroupInvitations(model: GroupSharingModel, texts: GroupSharingTexts, groupName: string): Array<TableLineAttrs> {
 		return model.sentGroupInvitations.map((sentGroupInvitation) => {
 			return {
 				cells: () => [
@@ -113,12 +113,8 @@ class GroupSharingDialogContent implements MComponent<GroupSharingDialogAttrs> {
 				actionButtonAttrs: {
 					label: "remove_action",
 					click: () => {
-						Dialog.confirm(() => texts.removeMemberMessage(groupName, sentGroupInvitation.inviteeMailAddress))
-						      .then((confirmed) => {
-							      if (confirmed) {
-								      model.cancelInvitation(sentGroupInvitation)
-							      }
-						      })
+						getConfirmation(() => texts.removeMemberMessage(groupName, sentGroupInvitation.inviteeMailAddress))
+							.confirmed(() => model.cancelInvitation(sentGroupInvitation))
 					},
 					icon: () => Icons.Cancel,
 					isVisible: () => model.canCancelInvitation(sentGroupInvitation)
@@ -127,7 +123,7 @@ class GroupSharingDialogContent implements MComponent<GroupSharingDialogAttrs> {
 		})
 	}
 
-	_renderMemberInfos(model: GroupSharingModel, texts: GroupSharingDialogTexts, groupName: string): Array<TableLineAttrs> {
+	_renderMemberInfos(model: GroupSharingModel, texts: GroupSharingTexts, groupName: string): Array<TableLineAttrs> {
 		return model.memberInfos.map((memberInfo) => {
 			return {
 				cells: () => [
@@ -143,11 +139,8 @@ class GroupSharingDialogContent implements MComponent<GroupSharingDialogAttrs> {
 					label: "delete_action",
 					icon: () => Icons.Cancel,
 					click: () => {
-						Dialog.confirm(() => texts.removeMemberMessage(groupName, downcast(memberInfo.info.mailAddress))).then((confirmed) => {
-							if (confirmed) {
-								model.removeGroupMember(memberInfo.member)
-							}
-						})
+						getConfirmation(() => texts.removeMemberMessage(groupName, downcast(memberInfo.info.mailAddress)))
+							.confirmed(() => model.removeGroupMember(memberInfo.member))
 					},
 					isVisible: () => model.canRemoveGroupMember(memberInfo.member)
 				}
@@ -156,7 +149,7 @@ class GroupSharingDialogContent implements MComponent<GroupSharingDialogAttrs> {
 	}
 }
 
-function showAddParticipantDialog(model: GroupSharingModel, texts: GroupSharingDialogTexts) {
+function showAddParticipantDialog(model: GroupSharingModel, texts: GroupSharingTexts) {
 	const invitePeopleValueTextField: BubbleTextField<RecipientInfo> = new BubbleTextField("shareWithEmailRecipient_label", new RecipientInfoBubbleHandler({
 		createBubble(name: ? string, mailAddress: string, contact: ? Contact): Bubble<RecipientInfo> {
 			let recipientInfo = createRecipientInfo(mailAddress, name, contact)
@@ -212,7 +205,7 @@ function showAddParticipantDialog(model: GroupSharingModel, texts: GroupSharingD
 			}),
 			m(TextFieldN, {
 				value: stream(realGroupName),
-				label: getGroupLabelTranslationKey(downcast(model.info.groupType)),
+				label: texts.groupNameLabel,
 				disabled: true,
 				helpLabel: () => {
 					return m("",
@@ -240,20 +233,16 @@ function showAddParticipantDialog(model: GroupSharingModel, texts: GroupSharingD
 									dialog.close()
 									sendShareNotificationEmail(model.info,
 										invitedMailAddresses.map(ma => createRecipientInfo(ma.address, null, null)),
-										texts.shareEmailSubject,
-										(sender) => texts.shareEmailBody(getGroupName(model.info, false), sender))
+										texts)
 								})
 								.catch(PreconditionFailedError, e => {
 									if (logins.getUserController().isGlobalAdmin()) {
-										Dialog.confirm("sharingFeatureNotOrderedAdmin_msg")
-										      .then(confirmed => {
-											      if (confirmed) {
-												      import("../../subscription/BuyDialog")
-													      .then((BuyDialog) => BuyDialog.showSharingBuyDialog(true))
-											      }
-										      })
+										getConfirmation(() => texts.sharingNotOrderedAdmin)
+											.confirmed(() =>
+												import("../../subscription/BuyDialog")
+													.then((BuyDialog) => BuyDialog.showSharingBuyDialog(true)))
 									} else {
-										Dialog.error(() => `${lang.get("sharingFeatureNotOrderedUser_msg")} ${lang.get("contactAdmin_msg")}`)
+										Dialog.error(() => `${texts.sharingNotOrderedUser} ${lang.get("contactAdmin_msg")}`)
 									}
 								})
 								.catch(UserError, showUserError)

@@ -16,89 +16,95 @@ import {isSameId} from "../../api/common/utils/EntityUtils"
 import {sendAcceptNotificationEmail, sendRejectNotificationEmail} from "../GroupSharingUtils"
 import {getCapabilityText, getInvitationGroupType, groupRequiresBusinessFeature, isUsingBusinessFeatureAllowed} from "../GroupUtils"
 import {showBusinessFeatureRequiredDialog} from "../../misc/SubscriptionDialogs"
+import {getTextsForGroupType} from "../GroupGuiUtils"
+import {GroupType} from "../../api/common/TutanotaConstants"
+import {ColorPicker} from "../../gui/base/ColorPicker"
+import type {GroupSharingTexts} from "../GroupGuiUtils"
 
 
 export function showGroupInvitationDialog(invitation: ReceivedGroupInvitation) {
+	const groupType = getInvitationGroupType(invitation)
+	const texts = getTextsForGroupType(groupType)
+
 	const userSettingsGroupRoot = logins.getUserController().userSettingsGroupRoot
 	const existingGroupSettings = userSettingsGroupRoot.groupSettings.find((gc) => gc.group === invitation.sharedGroup)
-	const color = existingGroupSettings ? existingGroupSettings.color : Math.random().toString(16).slice(-6)
+	const color = existingGroupSettings
+		? existingGroupSettings.color
+		: Math.random().toString(16).slice(-6)
 
-	let colorPickerDom: ?HTMLInputElement
 	const colorStream = stream("#" + color)
 
-	const isMember = logins.getUserController().getCalendarMemberships().find((ms) => isSameId(ms.group, invitation.sharedGroup))
+	const isMember = !!logins.getUserController().getCalendarMemberships().find((ms) => isSameId(ms.group, invitation.sharedGroup))
+	let dialog
 
-	const dialog = Dialog.showActionDialog({
+	const onAcceptClicked = () => {
+		checkCanAcceptInvitation(invitation).then(canAccept => {
+			if (canAccept) {
+				acceptInvite(invitation, texts).then(() => {
+					dialog.close()
+					if (groupType === GroupType.Calendar) {
+						const newColor = colorStream().substring(1) // color is stored without #
+						if (existingGroupSettings) {
+							existingGroupSettings.color = newColor
+						} else {
+							const groupSettings = Object.assign(createGroupSettings(), {
+								group: invitation.sharedGroup,
+								color: newColor
+							})
+							userSettingsGroupRoot.groupSettings.push(groupSettings)
+						}
+						update(userSettingsGroupRoot)
+					}
+				})
+			}
+		})
+	}
+
+	dialog = Dialog.showActionDialog({
 		title: () => lang.get("invitation_label"),
 		child: {
 			view: () => m(".flex.col", [
-				m(".pt.selectable", isMember ? lang.get("alreadyMember_msg") : (lang.get("shareCalendarWarning_msg") + " "
-					+ lang.get("shareCalendarWarningAliases_msg"))),
-				m(TextFieldN, {
-					value: stream(invitation.sharedGroupName),
-					label: "calendarName_label",
-					disabled: true
-				}),
-				m(TextFieldN, {
-					value: stream(getDisplayText(invitation.inviterName, invitation.inviterMailAddress, false)),
-					label: "sender_label",
-					disabled: true
-				}),
-				m(TextFieldN, {
-					value: stream(invitation.inviteeMailAddress),
-					label: "to_label",
-					disabled: true
-				}),
-				m(TextFieldN, {
-					value: stream(getCapabilityText(downcast(invitation.capability))),
-					label: "permissions_label",
-					disabled: true
-				}),
-				m(".small.mt.mb-xs", lang.get("color_label")),
-				m("input.mb.color-picker", {
-					oncreate: ({dom}) => colorPickerDom = dom,
-					type: "color",
-					value: colorStream(),
-					oninput: (inputEvent) => {
-						console.log("new color", inputEvent.target.value)
-						colorStream(inputEvent.target.value)
-					}
-				}),
-				isMember ? null : m(ButtonN, {
-					label: "acceptInvitation_action",
-					type: ButtonType.Login,
-					click: () => {
-						checkCanAcceptInvitation(invitation)
-							.then(canAccept => {
-								if (canAccept) {
-									acceptInvite(invitation).then(() => {
-										dialog.close()
-										const newColor = colorStream().substring(1) // color is stored without #
-										if (existingGroupSettings) {
-											existingGroupSettings.color = newColor
-											console.log("existing group color", newColor)
-										} else {
-											const groupSettings = Object.assign(createGroupSettings(), {
-												group: invitation.sharedGroup,
-												color: newColor
-											})
-											userSettingsGroupRoot.groupSettings.push(groupSettings)
-											console.log("existing group color", newColor)
-										}
-
-										return update(userSettingsGroupRoot)
-									})
-								}
-							})
-					}
-				})
+				m(".mb", [
+					m(".pt.selectable", isMember
+						? lang.getMaybeLazy(texts.alreadyGroupMemberMessage)
+						: texts.receivedGroupInvitationMessage),
+					m(TextFieldN, {
+						value: stream(invitation.sharedGroupName),
+						label: texts.groupNameLabel,
+						disabled: true
+					}),
+					m(TextFieldN, {
+						value: stream(getDisplayText(invitation.inviterName, invitation.inviterMailAddress, false)),
+						label: "sender_label",
+						disabled: true
+					}),
+					m(TextFieldN, {
+						value: stream(invitation.inviteeMailAddress),
+						label: "to_label",
+						disabled: true
+					}),
+					m(TextFieldN, {
+						value: stream(getCapabilityText(downcast(invitation.capability))),
+						label: "permissions_label",
+						disabled: true
+					}),
+					groupType === GroupType.Calendar
+						? renderCalendarGroupInvitationFields(invitation, colorStream)
+						: null,
+				]),
+				isMember
+					? null
+					: m(ButtonN, {
+						label: "acceptInvitation_action",
+						type: ButtonType.Login,
+						click: onAcceptClicked
+					})
 			])
 		},
 		okActionTextId: 'decline_action',
 		okAction: (dialog) => {
 			dialog.close()
-			declineInvite(invitation)
-
+			declineInvite(invitation, texts)
 		},
 		cancelActionTextId: 'close_alt'
 	})
@@ -114,8 +120,7 @@ function checkCanAcceptInvitation(invitation: ReceivedGroupInvitation): Promise<
 
 			return logins.getUserController().loadCustomer().then(customer => {
 				if (groupRequiresBusinessFeature(getInvitationGroupType(invitation)) && !isUsingBusinessFeatureAllowed(customer)) {
-					// TODO Translate
-					return showBusinessFeatureRequiredDialog(() => "It's templates")
+					return showBusinessFeatureRequiredDialog("businessFeatureRequiredGeneral_msg")
 				} else {
 					return true
 				}
@@ -123,17 +128,23 @@ function checkCanAcceptInvitation(invitation: ReceivedGroupInvitation): Promise<
 		})
 }
 
+function renderCalendarGroupInvitationFields(invitation: ReceivedGroupInvitation, selectedColourValue: Stream<string>): Children {
+	return [
+		m(".small.mt.mb-xs", lang.get("color_label")),
+		m(ColorPicker, {value: selectedColourValue})
+	]
+}
 
-function acceptInvite(invitation: ReceivedGroupInvitation): Promise<void> {
+function acceptInvite(invitation: ReceivedGroupInvitation, texts: GroupSharingTexts): Promise<void> {
 	return worker.acceptGroupInvitation(invitation)
 	             .then(() => {
-		             sendAcceptNotificationEmail(invitation)
+		             sendAcceptNotificationEmail(invitation, texts)
 	             })
 }
 
-function declineInvite(invitation: ReceivedGroupInvitation): Promise<void> {
+function declineInvite(invitation: ReceivedGroupInvitation, texts: GroupSharingTexts): Promise<void> {
 	return worker.rejectGroupInvitation(invitation._id)
 	             .then(() => {
-		             sendRejectNotificationEmail(invitation)
+		             sendRejectNotificationEmail(invitation, texts)
 	             })
 }

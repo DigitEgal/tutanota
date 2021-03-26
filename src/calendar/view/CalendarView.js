@@ -550,20 +550,7 @@ export class CalendarView implements CurrentView {
 						if (logins.getUserController().isFreeAccount()) {
 							showNotAvailableForFreeDialog(false)
 						} else {
-							showGroupSharingDialog(groupInfo, sharedCalendar, {
-								defaultGroupName: "Private",
-								shareEmailSubject: lang.get("shareCalendarInvitationEmailSubject_msg"),
-								shareEmailBody: (calendarName, sender) => lang.get("shareCalendarInvitationEmailBody_msg", {
-									// Sender is displayed like Name <mail.address@tutanota.com>. Less-than and greater-than must be encoded for HTML
-									"{inviter}": sender,
-									"{calendarName}": calendarName
-								}),
-								addMemberMessage: (_) => `${lang.get("shareCalendarWarning_msg")} ${lang.get("shareCalendarWarningAliases_msg")}`,
-								removeMemberMessage: (calendarName, invitee) => lang.get("removeCalendarParticipantConfirm_msg", {
-									"{participant}": invitee,
-									"{calendarName}": calendarName,
-								})
-							})
+							showGroupSharingDialog(groupInfo, sharedCalendar)
 						}
 					},
 					type: ButtonType.Dropdown,

@@ -12,6 +12,7 @@ import {attachDropdown} from "./DropdownN"
 import type {MaybeLazy} from "../../api/common/utils/Utils"
 import {mapLazily, noOp} from "../../api/common/utils/Utils"
 import {promiseMap} from "../../api/common/utils/PromiseUtils"
+import {Dialog} from "./Dialog"
 
 // TODO Use DropDownSelectorN
 export function createCountryDropdown(selectedCountry: Stream<?Country>, helpLabel?: lazy<string>, label: TranslationKey | lazy<string> = "invoiceCountry_label"): DropDownSelector<?Country> {
@@ -41,4 +42,36 @@ export function moreButton(lazyChildren: MaybeLazy<$Promisable<$ReadOnlyArray<?D
 			// If type hasn't been bound on the child it get's set to Dropdown, otherwise we use what is already there
 			: Object.assign({}, {type: ButtonType.Dropdown}, child))
 	)))
+}
+
+
+type Confirmation = {
+	confirmed: (() => mixed) => Confirmation;
+	cancelled: (() => mixed) => Confirmation;
+	result: Promise<boolean>;
+}
+
+export function getConfirmation(message: TranslationKey | lazy<string>, confirmMessage: TranslationKey = "ok_action"): Confirmation {
+	const confirmationPromise = Dialog.confirm(message, confirmMessage)
+	const confirmation: Confirmation = {
+		confirmed(action) {
+			confirmationPromise.then(ok => {
+				if (ok) {
+					action()
+				}
+			})
+			return confirmation
+		},
+		cancelled(action) {
+			confirmationPromise.then(ok => {
+				if (!ok) {
+					action()
+				}
+			})
+			return confirmation
+		},
+		result: confirmationPromise
+	}
+
+	return confirmation
 }

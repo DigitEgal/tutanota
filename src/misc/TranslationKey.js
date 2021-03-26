@@ -1351,3 +1351,23 @@ export type TranslationKeyType = "about_label"
 	| "deleteTemplateGroups_msg"
 	| "openTemplatePopup_msg"
 	| "createTemplateGroup_msg"
+	| "leaveGroup_action"
+	| "templateGroupInvitations_label"
+	| "confirmDeleteTemplateGroup_msg"
+	| "confirmLeaveTemplateGroup_msg"
+	| "templateGroupParticipants_label"
+	| "templateSharingNotOrderedUser_msg"
+	| "templateSharingNotOrderedAdmin_msg"
+	| "alreadyTemplateGroupMember_msg"
+
+	| "acceptTemplateGroupEmailSubject_msg"
+	| "acceptTemplateGroupEmailBody_msg"
+
+	| "declineTemplateGroupEmailSubject_msg"
+	| "declineTemplateGroupEmailBody_msg"
+
+	| "shareTemplateGroupEmailSubject_msg"
+	| "shareTemplateGroupEmailBody_msg"
+
+	| "shareTemplateGroupWarning_msg"
+	| "removeTemplateGroupMemberConfirm_msg"

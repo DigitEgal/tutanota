@@ -1,7 +1,6 @@
 //@flow
 import type {Recipients} from "../mail/editor/SendMailModel"
-import {getDefaultSender, getEnabledMailAddresses} from "../mail/model/MailUtils"
-import {lang} from "../misc/LanguageViewModel"
+import {getDefaultSender, getEnabledMailAddresses, getSenderNameForUser} from "../mail/model/MailUtils"
 import type {GroupInfo} from "../api/entities/sys/GroupInfo"
 import type {ReceivedGroupInvitation} from "../api/entities/sys/ReceivedGroupInvitation"
 import {locator} from "../api/main/MainLocator"
@@ -9,37 +8,35 @@ import type {RecipientInfo} from "../api/common/RecipientInfo"
 import {logins} from "../api/main/LoginController"
 import {MailMethod} from "../api/common/TutanotaConstants"
 import {showProgressDialog} from "../gui/ProgressDialog"
+import type {GroupSharingTexts} from "./GroupGuiUtils"
 
-export function sendShareNotificationEmail(sharedGroupInfo: GroupInfo, recipients: Array<RecipientInfo>, subject: string, body: (sender: string) => string) {
+export function sendShareNotificationEmail(sharedGroupInfo: GroupInfo, recipients: Array<RecipientInfo>, texts: GroupSharingTexts) {
 	locator.mailModel.getUserMailboxDetails().then((mailboxDetails) => {
 		const senderMailAddress = getDefaultSender(logins, mailboxDetails)
+		const userName = getSenderNameForUser(mailboxDetails, logins.getUserController())
 		// Sending notifications as bcc so that invited people don't see each other
 		const bcc = recipients.map(({name, mailAddress}) => ({name, address: mailAddress}))
-		_sendNotificationEmail({bcc}, subject, body(senderMailAddress), senderMailAddress)
+		_sendNotificationEmail({bcc}, texts.shareEmailSubject, texts.shareEmailBody(userName, sharedGroupInfo.name), senderMailAddress)
 	})
 }
 
 
-export function sendAcceptNotificationEmail(invitation: ReceivedGroupInvitation) {
-	const replacements = {
-		"{invitee}": invitation.inviteeMailAddress,
-		"{calendarName}": invitation.sharedGroupName,
-		"{recipientName}": invitation.inviterMailAddress
-	}
+export function sendAcceptNotificationEmail(invitation: ReceivedGroupInvitation, texts: GroupSharingTexts) {
 	const to = [{name: invitation.inviterName, address: invitation.inviterMailAddress}]
+	const userName = invitation.inviterMailAddress
+	const invitee = invitation.inviteeMailAddress
+	const groupName = invitation.sharedGroupName
 	const senderMailAddress = invitation.inviteeMailAddress
-	_sendNotificationEmail({to}, lang.get("shareCalendarAcceptEmailSubject_msg"), lang.get("shareCalendarAcceptEmailBody_msg", replacements), senderMailAddress)
+	_sendNotificationEmail({to}, texts.acceptEmailSubject, texts.acceptEmailBody(userName, invitee, groupName), senderMailAddress)
 }
 
-export function sendRejectNotificationEmail(invitation: ReceivedGroupInvitation) {
-	const replacements = {
-		"{invitee}": invitation.inviteeMailAddress,
-		"{calendarName}": invitation.sharedGroupName,
-		"{recipientName}": invitation.inviterMailAddress
-	}
+export function sendRejectNotificationEmail(invitation: ReceivedGroupInvitation, texts: GroupSharingTexts) {
 	const to = [{name: invitation.inviterName, address: invitation.inviterMailAddress}]
+	const userName = invitation.inviterMailAddress
+	const invitee = invitation.inviteeMailAddress
+	const groupName = invitation.sharedGroupName
 	const senderMailAddress = invitation.inviteeMailAddress
-	_sendNotificationEmail({to}, lang.get("shareCalendarDeclineEmailSubject_msg"), lang.get("shareCalendarDeclineEmailBody_msg", replacements), senderMailAddress)
+	_sendNotificationEmail({to}, texts.declineEmailSubject, texts.declineEmailBody(userName, invitee, groupName), senderMailAddress)
 }
 
 

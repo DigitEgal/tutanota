@@ -6,6 +6,8 @@ import type {TranslationKeyType} from "./TranslationKey"
 
 export type TranslationKey = TranslationKeyType
 
+export type TranslationText = TranslationKey | lazy<string>
+
 assertMainOrNodeBoot()
 
 export type DateTimeFormatOptions = {
@@ -417,7 +419,7 @@ export class LanguageViewModel {
 		return text
 	}
 
-	getMaybeLazy(value: TranslationKey | lazy<string>): string {
+	getMaybeLazy(value: TranslationText): string {
 		return typeof value === "function" ? value() : lang.get(value)
 	}
 

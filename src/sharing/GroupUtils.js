@@ -108,17 +108,6 @@ export function getDefaultGroupName(groupType: GroupTypeEnum): string {
 	}
 }
 
-export function getGroupLabelTranslationKey(groupType: GroupTypeEnum): TranslationKey {
-	switch (groupType) {
-		case GroupType.Calendar:
-			return "calendarName_label"
-		case GroupType.Template:
-			return "templateGroupName_label"
-		default:
-			return "emptyString_msg"
-	}
-}
-
 
 export function loadReceivedGroupInvitations(userController: IUserController, entityClient: EntityClient, type: GroupTypeEnum): Promise<Array<ReceivedGroupInvitation>> {
 	return entityClient.load(UserGroupRootTypeRef, userController.userGroupInfo.group)

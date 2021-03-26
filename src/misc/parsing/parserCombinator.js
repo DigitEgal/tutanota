@@ -1,6 +1,7 @@
 //@flow
-import {downcast} from "../api/common/utils/Utils"
-import {TutanotaError} from "../api/common/error/TutanotaError"
+import {downcast} from "../../api/common/utils/Utils"
+import {TutanotaError} from "../../api/common/error/TutanotaError"
+import {ProgrammingError} from "../../api/common/error/ProgrammingError"
 
 export type Parser<T> = (StringIterator) => T
 
@@ -34,6 +35,31 @@ export function makeCharacterParser(character: string): Parser<string> {
 	}
 }
 
+export function makeCharactersParser(first: string, ...rest: Array<string>): Parser<string> {
+	return makeAnyParser(makeCharacterParser(first), ...rest.map(makeCharacterParser))
+}
+
+/**
+ * If parser succeeds then fail, if it fails, then return what it failed to parse
+ * @param parser
+ * @returns {function(StringIterator): (string|undefined)}
+ */
+export function makeNotParser(parser: Parser<string>): Parser<string> {
+	return (iterator: StringIterator) => {
+		const iteratorStart = iterator.position
+		try {
+			parser(iterator)
+		} catch (e) {
+			if (e instanceof ParserError) {
+				const iteratorEnd = iterator.position
+				return iterator.iteratee.slice(iteratorStart, iteratorEnd)
+			}
+			throw e
+		}
+		throw new ParserError("expected parser not to parser, but it parsed")
+	}
+}
+
 function makeZeroOrMoreParser<T>(anotherParser: Parser<T>): Parser<Array<T>> {
 	return (iterator: StringIterator) => {
 		const result = []
@@ -53,7 +79,7 @@ export function mapParser<T, R>(parser: Parser<T>, mapper: (T) => R): Parser<R> 
 	return (iterator: StringIterator) => mapper(parser(iterator))
 }
 
-function makeOneOrMoreParser<T>(parser: Parser<T>): Parser<Array<T>> {
+export function makeOneOrMoreParser<T>(parser: Parser<T>): Parser<Array<T>> {
 	return mapParser(makeZeroOrMoreParser(parser), (value: Array<T>) => {
 		if (value.length === 0) {
 			throw new ParserError("Expected at least one value, got none")
@@ -103,6 +129,17 @@ export function makeEitherParser<A, B>(parserA: Parser<A>, parserB: Parser<B>): 
 	}
 }
 
+/**
+ * Parses when any of the provided parsers parse, in the order that they are provided (don't cronch the stack with this)
+ * @param first
+ * @param rest
+ * @returns {T|Parser<unknown>|Parser<T>}
+ */
+export function makeAnyParser<T>(first: Parser<T>, ...rest: Array<Parser<T>>): Parser<T> {
+	return rest.reduce((wrappedParser, thisParser) => makeEitherParser(wrappedParser, thisParser), first)
+}
+
+
 function makeOneOfCharactersParser(allowed: Array<string>): Parser<string> {
 	return (iterator: StringIterator) => {
 		const value = iterator.peek()
@@ -119,6 +156,8 @@ export const numberParser: Parser<number> = mapParser(makeOneOrMoreParser(makeOn
 	])),
 	(values) => parseInt(values.join(""), 10))
 
+type IteratorNext = {done: true, value: null} | {done: false, value: string}
+
 export class StringIterator {
 	iteratee: string
 	position: number = -1
@@ -127,10 +166,12 @@ export class StringIterator {
 		this.iteratee = iteratee
 	}
 
-	next(): {value: ?string, done: boolean} {
+	next(): IteratorNext {
 		const value = this.iteratee[++this.position]
-		const done = this.position >= this.iteratee.length
-		return {value, done}
+		const done: boolean = this.position >= this.iteratee.length
+		return done
+			? {done: true, value: null}
+			: {done: false, value}
 	}
 
 	peek(): string {

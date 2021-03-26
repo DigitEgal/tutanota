@@ -56,6 +56,7 @@ type ActionDialogProps = {|
 	type?: DialogTypeEnum,
 |}
 
+
 export class Dialog {
 	static _keyboardHeight: number = 0;
 	_domDialog: HTMLElement;
@@ -347,7 +348,6 @@ export class Dialog {
 		})
 	}
 
-
 	/**
 	 * Simpler version of {@link Dialog#confirmMultiple} with just two options: no and yes (or another confirmation).
 	 * @return Promise, which is resolved with user selection - true for confirm, false for cancel.
@@ -364,6 +364,8 @@ export class Dialog {
 			]
 			const dialog = Dialog.confirmMultiple(messageIdOrMessageFunction, buttonAttrs, resolve)
 		})
+
+
 	}
 
 
