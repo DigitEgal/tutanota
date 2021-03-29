@@ -99,7 +99,7 @@ function getAvailableGroupTypes(): GroupTypeEnum[] {
 	} else if (logins.isProdDisabled()) {
 		return logins.getUserController().isGlobalAdmin() ? [GroupType.LocalAdmin] : []
 	} else {
-		return logins.getUserController().isGlobalAdmin() ? [GroupType.Mail, GroupType.LocalAdmin, GroupType.Template] : [GroupType.Mail]
+		return logins.getUserController().isGlobalAdmin() ? [GroupType.Mail, GroupType.LocalAdmin] : [GroupType.Mail]
 	}
 }
 

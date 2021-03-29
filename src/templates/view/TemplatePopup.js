@@ -375,7 +375,7 @@ export class TemplatePopup implements ModalComponent {
 		return m(".flex.flex-column",
 			this._templateModel.containsResult()
 				? m(".templates-search-results", this._templateModel.getSearchResults()()
-				                                     .map((template, index) => this._renderTemplateListRow(template)))
+				                                     .map(template => this._renderTemplateListRow(template)))
 				: m(".row-selected.text-center.pt",
 				lang.get(this._templateModel.isLoaded()
 					? "nothingFound_label"

@@ -67,6 +67,7 @@ import {FolderExpander} from "../../gui/base/FolderExpander"
 import {archiveMails, moveMails, moveToInbox, promptAndDeleteMails} from "./MailGuiUtils"
 import {getListId, isSameId} from "../../api/common/utils/EntityUtils"
 import {isNewMailActionAvailable} from "../../gui/nav/NavFunctions"
+import {listSelectionKeyboardShortcuts} from "../../gui/base/List"
 
 assertMainOrNode()
 
@@ -243,50 +244,7 @@ export class MailView implements CurrentView {
 				},
 				help: "scrollToBottom_action"
 			},
-			{
-				key: Keys.UP,
-				exec: () => this.mailList.list.selectPrevious(false),
-				help: "selectPrevious_action"
-			},
-			{
-				key: Keys.K,
-				exec: () => this.mailList.list.selectPrevious(false),
-				help: "selectPrevious_action"
-			},
-			{
-				key: Keys.UP,
-				shift: true,
-				exec: () => this.mailList.list.selectPrevious(true),
-				help: "addPrevious_action"
-			},
-			{
-				key: Keys.K,
-				shift: true,
-				exec: () => this.mailList.list.selectPrevious(true),
-				help: "addPrevious_action"
-			},
-			{
-				key: Keys.DOWN,
-				exec: () => this.mailList.list.selectNext(false),
-				help: "selectNext_action"
-			},
-			{
-				key: Keys.J,
-				exec: () => this.mailList.list.selectNext(false),
-				help: "selectNext_action"
-			},
-			{
-				key: Keys.DOWN,
-				shift: true,
-				exec: () => this.mailList.list.selectNext(true),
-				help: "addNext_action"
-			},
-			{
-				key: Keys.J,
-				shift: true,
-				exec: () => this.mailList.list.selectNext(true),
-				help: "addNext_action"
-			},
+		].concat(listSelectionKeyboardShortcuts(() => this.mailList.list)).concat([
 			{
 				key: Keys.N,
 				exec: () => (this._showNewMailDialog().catch(PermissionError, noOp): any),
@@ -380,7 +338,7 @@ export class MailView implements CurrentView {
 				enabled: canDoDragAndDropExport,
 				help: "dragAndDrop_action"
 			}
-		]
+		])
 
 		// do not stop observing the mailboxDetails when this view is invisible because the view is cached and switching back to this view while the mailboxes have changed leads to errors
 		locator.mailModel.mailboxDetails.map(mailboxDetails => {

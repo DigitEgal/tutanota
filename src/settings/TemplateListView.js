@@ -62,10 +62,10 @@ export class TemplateListView implements UpdatableSettingsViewer {
 				return (titleA < titleB) ? -1 : (titleA > titleB) ? 1 : 0
 			},
 			elementSelected: (templates: Array<EmailTemplate>, elementClicked) => {
-				if (elementClicked) {
+				if (templates.length > 0) {
 					this._settingsView.detailsViewer = new TemplateDetailsViewer(templates[0], this._entityClient, () => !this.userCanEdit())
 					this._settingsView.focusSettingsDetailsColumn()
-				} else if (templates.length === 0 && this._settingsView.detailsViewer) {
+				} else {
 					this._settingsView.detailsViewer = null
 					m.redraw()
 				}
