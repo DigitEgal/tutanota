@@ -211,9 +211,9 @@ export class TemplatePopup implements ModalComponent {
 					} else if (selectedRelativeBottom > scrollWindowHeight) {
 						this._scrollDom.scrollTop = selectedBottom - scrollWindowHeight
 					}
-					return true
-				} else {
 					return false
+				} else {
+					return true
 				}
 			},
 			oninput: (value) => {
