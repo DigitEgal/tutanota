@@ -8,7 +8,7 @@ import {isKeyPressed} from "../../misc/KeyManager"
 import type {PosRect} from "../../gui/base/Dropdown"
 import type {TextFieldAttrs} from "../../gui/base/TextFieldN"
 import stream from "mithril/stream/stream.js"
-import {Keys} from "../../api/common/TutanotaConstants"
+import {Keys, ShareCapability} from "../../api/common/TutanotaConstants"
 import {TemplatePopupResultRow} from "./TemplatePopupResultRow"
 import {Icons} from "../../gui/base/icons/Icons"
 import {Icon} from "../../gui/base/Icon"
@@ -19,7 +19,7 @@ import {windowFacade} from "../../misc/WindowFacade"
 import type {EmailTemplate} from "../../api/entities/tutanota/EmailTemplate"
 import type {ButtonAttrs} from "../../gui/base/ButtonN"
 import {ButtonColors, ButtonN, ButtonType} from "../../gui/base/ButtonN"
-import {SELECT_NEXT_TEMPLATE, SELECT_PREV_TEMPLATE, TEMPLATE_SHORTCUT_PREFIX, TemplateModel} from "../model/TemplateModel"
+import {SELECT_NEXT_TEMPLATE, SELECT_PREV_TEMPLATE, TEMPLATE_SHORTCUT_PREFIX, TemplatePopupModel} from "../model/TemplatePopupModel"
 import {attachDropdown} from "../../gui/base/DropdownN"
 import {downcast, neverNull, noOp} from "../../api/common/utils/Utils"
 import {locator} from "../../api/main/MainLocator"
@@ -27,6 +27,11 @@ import {TemplateGroupRootTypeRef} from "../../api/entities/tutanota/TemplateGrou
 import {TemplateSearchBar} from "./TemplateSearchBar"
 import {DomRectReadOnlyPolyfilled} from "../../gui/base/Dropdown"
 import {Editor} from "../../gui/editor/Editor"
+import {logins} from "../../api/main/LoginController"
+import {showBusinessFeatureRequiredDialog} from "../../misc/SubscriptionDialogs"
+import {worker} from "../../api/main/WorkerClient"
+import type {TemplateGroupRoot} from "../../api/entities/tutanota/TemplateGroupRoot"
+import {getSharedGroupName, hasCapabilityOnGroup} from "../../sharing/GroupUtils"
 
 export const TEMPLATE_POPUP_HEIGHT = 340;
 export const TEMPLATE_POPUP_TWO_COLUMN_MIN_WIDTH = 600;
@@ -39,7 +44,8 @@ export const TEMPLATE_LIST_ENTRY_WIDTH = 354;
  */
 
 
-export function showTemplatePopupInEditor(templateModel: TemplateModel, editor: Editor, template: ?EmailTemplate, highlightedText: string) {
+export function showTemplatePopupInEditor(templateModel: TemplatePopupModel, editor: Editor, template: ?EmailTemplate, highlightedText: string) {
+
 	const initialSearchString = template ? TEMPLATE_SHORTCUT_PREFIX + template.tag : highlightedText
 	const cursorRect = editor.getCursorPosition()
 	const editorRect = editor.getDOM().getBoundingClientRect();
@@ -75,12 +81,12 @@ export class TemplatePopup implements ModalComponent {
 	_initialWindowWidth: number
 	_resizeListener: windowSizeListener
 	_redrawStream: Stream<*>
-	_templateModel: TemplateModel
+	_templateModel: TemplatePopupModel
 	_searchBarValue: Stream<string>
 	_selectTemplateButtonAttrs: ButtonAttrs
 	_inputDom: HTMLElement
 
-	constructor(templateModel: TemplateModel, rect: PosRect, onSelect: (string) => void, initialSearchString: string) {
+	constructor(templateModel: TemplatePopupModel, rect: PosRect, onSelect: (string) => void, initialSearchString: string) {
 		this._rect = rect
 		this._onSelect = onSelect
 		this._initialWindowWidth = window.innerWidth
@@ -226,6 +232,7 @@ export class TemplatePopup implements ModalComponent {
 	}
 
 	_renderAddButton(): Children {
+		const attrs = this._createAddButtonAttributes()
 		return m("", {
 			onkeydown: (e) => {
 				// prevents tabbing into the background of the modal
@@ -235,33 +242,52 @@ export class TemplatePopup implements ModalComponent {
 				}
 			}
 
-		}, m(ButtonN, this._createAddButtonAttributes()))
+		}, attrs ? m(ButtonN, attrs) : null)
 	}
 
-	_createAddButtonAttributes(): ButtonAttrs {
+	_createAddButtonAttributes(): ?ButtonAttrs {
 		const templateGroupInstances = this._templateModel.getTemplateGroupInstances()
-		if (templateGroupInstances.length === 1) {
+		const writeableGroups = templateGroupInstances.filter(instance =>
+			hasCapabilityOnGroup(logins.getUserController().user, instance.userGroup, ShareCapability.Write))
+
+		if (templateGroupInstances.length === 0) {
 			return {
 				label: "createTemplate_action",
 				click: () => {
-					import("../../settings/TemplateEditor").then(editor => {
-						editor.showTemplateEditor(null, templateGroupInstances[0].groupRoot)
+					createTemplatesIfAllowed().then(groupRoot => {
+						if (groupRoot) {
+							import("../../settings/TemplateEditor").then(editor => {
+								editor.showTemplateEditor(null, groupRoot)
+							})
+						}
 					})
 				},
 				type: ButtonType.ActionLarge,
 				icon: () => Icons.Add,
 				colors: ButtonColors.DrawerNav
 			}
-		} else {
+		} else if (writeableGroups.length === 1) {
+			return {
+				label: "createTemplate_action",
+				click: () => {
+					import("../../settings/TemplateEditor").then(editor => {
+						editor.showTemplateEditor(null, writeableGroups[0].groupRoot)
+					})
+				},
+				type: ButtonType.ActionLarge,
+				icon: () => Icons.Add,
+				colors: ButtonColors.DrawerNav
+			}
+		} else if (writeableGroups.length > 1) {
 			return attachDropdown({
 				label: "createTemplate_action",
 				click: noOp,
 				type: ButtonType.ActionLarge,
 				icon: () => Icons.Add,
 				colors: ButtonColors.DrawerNav
-			}, () => templateGroupInstances.map(groupInstances => {
+			}, () => writeableGroups.map(groupInstances => {
 				return {
-					label: () => groupInstances.groupInfo.name,
+					label: () => getSharedGroupName(groupInstances.groupInfo, true),
 					click: () => {
 						import("../../settings/TemplateEditor").then(editor => {
 							editor.showTemplateEditor(null, groupInstances.groupRoot)
@@ -276,6 +302,11 @@ export class TemplatePopup implements ModalComponent {
 
 	_renderEditButtons(selectedTemplate: EmailTemplate): Children {
 		const selectedContent = this._templateModel.getSelectedContent()
+		const selectedGroup = this._templateModel.getSelectedTemplateGroupInstance()
+
+		const canEdit = !!selectedGroup
+			&& hasCapabilityOnGroup(logins.getUserController().user, selectedGroup.userGroup, ShareCapability.Write)
+
 		return [
 			m(ButtonN, attachDropdown({
 					label: () => selectedContent ? selectedContent.languageCode + ' ▼' : "",
@@ -297,32 +328,36 @@ export class TemplatePopup implements ModalComponent {
 				}
 				)
 			)),
-			m(ButtonN, {
-				label: "editTemplate_action",
-				click: () => {
-					locator.entityClient.load(TemplateGroupRootTypeRef, neverNull(selectedTemplate._ownerGroup)).then(groupRoot => {
-						import("../../settings/TemplateEditor").then(editor => {
-							editor.showTemplateEditor(selectedTemplate, groupRoot)
-						})
+			canEdit
+				? [
+					m(ButtonN, {
+						label: "editTemplate_action",
+						click: () => {
+							locator.entityClient.load(TemplateGroupRootTypeRef, neverNull(selectedTemplate._ownerGroup)).then(groupRoot => {
+								import("../../settings/TemplateEditor").then(editor => {
+									editor.showTemplateEditor(selectedTemplate, groupRoot)
+								})
+							})
+						},
+						type: ButtonType.ActionLarge,
+						icon: () => Icons.Edit,
+						colors: ButtonColors.DrawerNav,
+					}),
+					m(ButtonN, {
+						label: "remove_action",
+						click: () => {
+							Dialog.confirm("deleteTemplate_msg").then((confirmed) => {
+								if (confirmed) {
+									locator.entityClient.erase(selectedTemplate)
+								}
+							})
+						},
+						type: ButtonType.ActionLarge,
+						icon: () => Icons.Trash,
+						colors: ButtonColors.DrawerNav,
 					})
-				},
-				type: ButtonType.ActionLarge,
-				icon: () => Icons.Edit,
-				colors: ButtonColors.DrawerNav,
-			}),
-			m(ButtonN, {
-				label: "remove_action",
-				click: () => {
-					Dialog.confirm("deleteTemplate_msg").then((confirmed) => {
-						if (confirmed) {
-							locator.entityClient.erase(selectedTemplate)
-						}
-					})
-				},
-				type: ButtonType.ActionLarge,
-				icon: () => Icons.Trash,
-				colors: ButtonColors.DrawerNav,
-			}),
+				]
+				: null,
 			m(".pr-s", m(".nav-bar-spacer")),
 			m("", {
 				onkeydown: (e) => {
@@ -342,7 +377,7 @@ export class TemplatePopup implements ModalComponent {
 				? m(".templates-search-results", this._templateModel.getSearchResults()()
 				                                     .map((template, index) => this._renderTemplateListRow(template)))
 				: m(".row-selected.text-center.pt",
-				lang.get(this._templateModel.hasLoaded()
+				lang.get(this._templateModel.isLoaded()
 					? "nothingFound_label"
 					: "loadingTemplates_label"))
 		)
@@ -372,10 +407,12 @@ export class TemplatePopup implements ModalComponent {
 						}
 					}, [
 						m(TemplatePopupResultRow, {template: template}),
-						this._templateModel.isSelectedTemplate(template) ? m(Icon, {
-							icon: Icons.ArrowForward,
-							style: {marginTop: "auto", marginBottom: "auto"}
-						}) : m("", {style: {width: "17.1px", height: "16px"}}),
+						this._templateModel.isSelectedTemplate(template)
+							? m(Icon, {
+								icon: Icons.ArrowForward,
+								style: {marginTop: "auto", marginBottom: "auto"}
+							})
+							: m("", {style: {width: "17.1px", height: "16px"}}),
 					]
 				)
 			]
@@ -432,4 +469,24 @@ export class TemplatePopup implements ModalComponent {
 	popState(e: Event): boolean {
 		return true
 	}
+}
+
+
+/**
+ * @return True if the group has been created.
+ */
+function createTemplatesIfAllowed(): Promise<?TemplateGroupRoot> {
+	return import("../../sharing/GroupUtils").then(({isUsingBusinessFeatureAllowed}) => {
+		return logins.getUserController().loadCustomer().then(customer => {
+			return isUsingBusinessFeatureAllowed(customer) || showBusinessFeatureRequiredDialog("businessFeatureRequiredTemplates_msg")
+		}).then(allowed => {
+			if (allowed) {
+				return worker.createTemplateGroup("")
+			}
+		}).then(groupId => {
+			if (groupId) {
+				return locator.entityClient.load(TemplateGroupRootTypeRef, groupId)
+			}
+		})
+	})
 }

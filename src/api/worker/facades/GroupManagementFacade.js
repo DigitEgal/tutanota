@@ -7,7 +7,7 @@ import {createInternalGroupData} from "../../entities/tutanota/InternalGroupData
 import {hexToUint8Array} from "../../common/utils/Encoding"
 import {decryptKey, encryptKey, encryptRsaKey, encryptString} from "../crypto/CryptoFacade"
 import type {LoginFacade} from "./LoginFacade"
-import {load, serviceRequestVoid} from "../EntityWorker"
+import {load, serviceRequest, serviceRequestVoid} from "../EntityWorker"
 import {TutanotaService} from "../../entities/tutanota/Services"
 import {HttpMethod} from "../../common/EntityFunctions"
 import {aes128RandomKey} from "../crypto/Aes"
@@ -23,6 +23,7 @@ import type {InternalGroupData} from "../../entities/tutanota/InternalGroupData"
 import type {User} from "../../entities/sys/User"
 import type {Group} from "../../entities/sys/Group"
 import {createTemplateGroupPostData} from "../../entities/tutanota/TemplateGroupPostData"
+import {CreateGroupPostReturnTypeRef} from "../../entities/tutanota/CreateGroupPostReturn"
 
 assertWorkerOrNode()
 
@@ -82,7 +83,7 @@ export class GroupManagementFacade {
 	}
 
 	// TODO Maybe consolidate with UserManagementFacade.generateCalendarGroupData and other possible similar methods
-	createTemplateGroup(name: string): Promise<void> {
+	createTemplateGroup(name: string): Promise<Id> {
 		const adminGroupId = this._login.getGroupId(GroupType.Admin)
 		const adminGroupKey = this._login.getAllGroupIds().indexOf(adminGroupId) !== -1
 			? this._login.getGroupKey(adminGroupId)
@@ -103,7 +104,8 @@ export class GroupManagementFacade {
 			adminGroup: adminGroupId
 		})
 
-		return serviceRequestVoid(TutanotaService.TemplateGroupService, HttpMethod.POST, serviceData)
+		return serviceRequest(TutanotaService.TemplateGroupService, HttpMethod.POST, serviceData, CreateGroupPostReturnTypeRef)
+			.then(returnValue => returnValue.group)
 	}
 
 	generateInternalGroupData(keyPair: RsaKeyPair, groupKey: Aes128Key, groupInfoSessionKey: Aes128Key, adminGroupId: ?Id, adminGroupKey: Aes128Key, ownerGroupKey: Aes128Key): InternalGroupData {

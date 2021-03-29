@@ -15,7 +15,7 @@ import type {GroupInfo} from "../../api/entities/sys/GroupInfo"
 import type {Group} from "../../api/entities/sys/Group"
 import {GroupTypeRef} from "../../api/entities/sys/Group"
 import type {GroupMemberInfo} from "../GroupUtils"
-import {getGroupName, hasCapabilityOnGroup, isSharedGroupOwner, loadGroupInfoForMember, loadGroupMembers} from "../GroupUtils"
+import {getSharedGroupName, hasCapabilityOnGroup, isSharedGroupOwner, loadGroupInfoForMember, loadGroupMembers} from "../GroupUtils"
 import type {LoginController} from "../../api/main/LoginController"
 import type {WorkerClient} from "../../api/main/WorkerClient"
 import {worker} from "../../api/main/WorkerClient"
@@ -111,7 +111,7 @@ export class GroupSharingModel {
 
 	sendGroupInvitation(sharedGroupInfo: GroupInfo, recipients: Array<RecipientInfo>, capability: ShareCapabilityEnum): Promise<Array<MailAddress>> {
 
-		return this.worker.sendGroupInvitation(sharedGroupInfo, getGroupName(sharedGroupInfo, false), recipients, capability)
+		return this.worker.sendGroupInvitation(sharedGroupInfo, getSharedGroupName(sharedGroupInfo, false), recipients, capability)
 		           .then((groupInvitationReturn) => {
 			           if (groupInvitationReturn.existingMailAddresses.length > 0
 				           || groupInvitationReturn.invalidMailAddresses.length > 0) {

@@ -6,10 +6,10 @@ import {Editor} from "../../gui/editor/Editor"
 import {KnowledgeBaseView} from "./KnowledgeBaseView"
 import {showTemplatePopupInEditor} from "../../templates/view/TemplatePopup"
 import {Dialog, DialogType} from "../../gui/base/Dialog"
-import type {TemplateModel} from "../../templates/model/TemplateModel"
+import type {TemplatePopupModel} from "../../templates/model/TemplatePopupModel"
 
 // TODO template model should be optional
-export function showKnowledgeBaseDialog(knowledgeBase: KnowledgeBaseModel, templateModel: TemplateModel, editor: Editor) {
+export function showKnowledgeBaseDialog(knowledgeBase: KnowledgeBaseModel, templateModel: TemplatePopupModel, editor: Editor) {
 	let dialog
 	const resizeListener = () => dialog.close()
 

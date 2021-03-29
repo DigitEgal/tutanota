@@ -3,7 +3,7 @@ import m from "mithril"
 import {TEMPLATE_POPUP_HEIGHT} from "./TemplatePopup"
 import {px, size} from "../../gui/size"
 import {Keys} from "../../api/common/TutanotaConstants"
-import {TemplateModel} from "../model/TemplateModel"
+import {TemplatePopupModel} from "../model/TemplatePopupModel"
 import {isKeyPressed} from "../../misc/KeyManager"
 import type {EmailTemplate} from "../../api/entities/tutanota/EmailTemplate"
 
@@ -14,7 +14,7 @@ import type {EmailTemplate} from "../../api/entities/tutanota/EmailTemplate"
 
 export type TemplateExpanderAttrs = {
 	template: EmailTemplate,
-	model: TemplateModel
+	model: TemplatePopupModel
 }
 
 export class TemplateExpander implements MComponent<TemplateExpanderAttrs> {

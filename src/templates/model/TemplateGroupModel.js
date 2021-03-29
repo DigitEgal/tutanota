@@ -14,7 +14,7 @@ import {neverNull} from "../../api/common/utils/Utils"
 import {UserTypeRef} from "../../api/entities/sys/User"
 import {isSameId} from "../../api/common/utils/EntityUtils"
 import type {Group} from "../../api/entities/sys/Group"
-import {loadTemplateGroupInstances} from "./TemplateModel"
+import {loadTemplateGroupInstances} from "./TemplatePopupModel"
 import {locator} from "../../api/main/MainLocator"
 
 export type TemplateGroupInstance = {

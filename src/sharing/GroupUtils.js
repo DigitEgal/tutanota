@@ -62,7 +62,7 @@ export function getCapabilityText(capability: ?ShareCapabilityEnum): string {
 	}
 }
 
-export function getGroupName(groupInfo: GroupInfo, allowGroupNameOverride: boolean): string {
+export function getSharedGroupName(groupInfo: GroupInfo, allowGroupNameOverride: boolean): string {
 	const {userSettingsGroupRoot} = logins.getUserController()
 	const groupSettings = userSettingsGroupRoot.groupSettings.find((gc) => gc.group === groupInfo.group)
 	return (allowGroupNameOverride && groupSettings && groupSettings.name)
@@ -102,7 +102,7 @@ export function getDefaultGroupName(groupType: GroupTypeEnum): string {
 		case GroupType.Calendar:
 			return lang.get("privateCalendar_label")
 		case GroupType.Template:
-			return "Templates"
+			return lang.get("template_label")
 		default:
 			return groupTypeToString(groupType)
 	}

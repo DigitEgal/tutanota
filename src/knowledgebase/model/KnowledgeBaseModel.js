@@ -17,7 +17,7 @@ import type {LoginController} from "../../api/main/LoginController"
 import {getElementId, isSameId} from "../../api/common/utils/EntityUtils"
 import type {TemplateGroupInstance} from "../../templates/model/TemplateGroupModel"
 import {promiseMap} from "../../api/common/utils/PromiseUtils"
-import {loadTemplateGroupInstance} from "../../templates/model/TemplateModel"
+import {loadTemplateGroupInstance} from "../../templates/model/TemplatePopupModel"
 
 export type KnowledgeBaseEntryInstance = {
 	group: TemplateGroupInstance;

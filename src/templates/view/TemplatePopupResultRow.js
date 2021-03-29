@@ -3,7 +3,7 @@ import m from "mithril"
 import {TEMPLATE_LIST_ENTRY_HEIGHT} from "./TemplatePopup"
 import {px} from "../../gui/size"
 import type {EmailTemplate} from "../../api/entities/tutanota/EmailTemplate"
-import {TEMPLATE_SHORTCUT_PREFIX} from "../model/TemplateModel"
+import {TEMPLATE_SHORTCUT_PREFIX} from "../model/TemplatePopupModel"
 
 export type TemplateResultRowAttrs = {
 	template: EmailTemplate

@@ -91,7 +91,7 @@ import {createCalendarEventViewModel} from "../CalendarEventViewModel"
 import {showNotAvailableForFreeDialog} from "../../misc/SubscriptionDialogs"
 import {showGroupInvitationDialog} from "../../sharing/view/ReceivedGroupInvitationDialog"
 import {
-	getGroupName,
+	getSharedGroupName,
 	getCapabilityText,
 	hasCapabilityOnGroup,
 	loadGroupMembers,
@@ -521,7 +521,7 @@ export class CalendarView implements CurrentView {
 									     "cursor": "pointer",
 								     }
 							     }),
-							     m(".pl-m.b.flex-grow.text-ellipsis", {style: {width: 0}}, getGroupName(calendarInfo.groupInfo, shared))
+							     m(".pl-m.b.flex-grow.text-ellipsis", {style: {width: 0}}, getSharedGroupName(calendarInfo.groupInfo, shared))
 						     ]),
 						     this._createCalendarActionDropdown(calendarInfo, colorValue, existingGroupSettings, userSettingsGroupRoot, shared)
 					     ])
@@ -573,7 +573,7 @@ export class CalendarView implements CurrentView {
 						click: () => {
 							const alarmInfoList = logins.getUserController().user.alarmInfoList
 							alarmInfoList
-							&& exportCalendar(getGroupName(groupInfo, sharedCalendar), groupRoot, alarmInfoList.alarms, new Date(), getTimeZone())
+							&& exportCalendar(getSharedGroupName(groupInfo, sharedCalendar), groupRoot, alarmInfoList.alarms, new Date(), getTimeZone())
 						},
 						isVisible: () => group.type === GroupType.Calendar
 							&& hasCapabilityOnGroup(logins.getUserController().user, group, ShareCapability.Read),
@@ -591,7 +591,7 @@ export class CalendarView implements CurrentView {
 	}
 
 	_confirmDeleteCalendar(calendarInfo: CalendarInfo) {
-		const calendarName = getGroupName(calendarInfo.groupInfo, false)
+		const calendarName = getSharedGroupName(calendarInfo.groupInfo, false)
 		loadGroupMembers(calendarInfo.group, locator.entityClient).then(members => {
 			const ownerMail = logins.getUserController().userGroupInfo.mailAddress
 			const otherMembers = members.filter(member => member.info.mailAddress !== ownerMail)
@@ -613,7 +613,7 @@ export class CalendarView implements CurrentView {
 
 	_onPressedEditCalendar(groupInfo: GroupInfo, colorValue: string, existingGroupSettings: ?GroupSettings, userSettingsGroupRoot: UserSettingsGroupRoot, shared: boolean) {
 		showEditCalendarDialog({
-			name: getGroupName(groupInfo, shared),
+			name: getSharedGroupName(groupInfo, shared),
 			color: colorValue.substring(1),
 
 		}, "edit_action", shared, (dialog, properties) => {

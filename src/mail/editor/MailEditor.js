@@ -56,8 +56,7 @@ import {showTemplatePopupInEditor} from "../../templates/view/TemplatePopup"
 import {registerTemplateShortcutListener} from "../../templates/view/TemplateShortcutListener"
 import {createKnowledgeBaseModel, KnowledgeBaseModel} from "../../knowledgebase/model/KnowledgeBaseModel"
 import {showKnowledgeBaseDialog} from "../../knowledgebase/view/KnowledgeBaseDialog"
-import type {TemplateModel} from "../../templates/model/TemplateModel"
-import {createTemplateModel} from "../../templates/model/TemplateModel"
+import {TemplatePopupModel} from "../../templates/model/TemplatePopupModel"
 
 export type MailEditorAttrs = {
 	model: SendMailModel,
@@ -70,17 +69,17 @@ export type MailEditorAttrs = {
 	selectedNotificationLanguage: Stream<string>,
 	inlineImages?: Promise<InlineImages>,
 	dialog: lazy<Dialog>,
-	// TemplateModel should be a promise, because we don't want to wait for all the templates to have loaded before we can open an editor
+	templateModel: ?TemplatePopupModel,
 	knowledgeBase: ?Promise<KnowledgeBaseModel>,
-	templateModel: ?Promise<TemplateModel>,
 }
 
 export function createMailEditorAttrs(model: SendMailModel,
                                       doBlockExternalContent: boolean,
                                       doFocusEditorOnLoad: boolean, inlineImages?: Promise<InlineImages>,
                                       dialog: lazy<Dialog>,
+                                      templateModel: ?TemplatePopupModel,
                                       knowledgeBase: ?Promise<KnowledgeBaseModel>,
-                                      templateModel: ?Promise<TemplateModel>,): MailEditorAttrs {
+): MailEditorAttrs {
 	return {
 		model,
 		body: stream(""),
@@ -90,8 +89,8 @@ export function createMailEditorAttrs(model: SendMailModel,
 		selectedNotificationLanguage: stream(""),
 		inlineImages: inlineImages,
 		dialog,
-		knowledgeBase,
 		templateModel,
+		knowledgeBase,
 	}
 }
 
@@ -104,7 +103,7 @@ export class MailEditor implements MComponent<MailEditorAttrs> {
 	mentionedInlineImages: Array<string>
 	inlineImageElements: Array<HTMLElement>
 	areTemplatesInitialized: boolean
-	templateModel: ?Promise<TemplateModel>
+	templateModel: ?TemplatePopupModel
 
 	constructor(vnode: Vnode<MailEditorAttrs>) {
 
@@ -115,7 +114,7 @@ export class MailEditor implements MComponent<MailEditorAttrs> {
 		const a: MailEditorAttrs = vnode.attrs
 		const model = a.model
 
-		this.templateModel = a.templateModel || null
+		this.templateModel = a.templateModel
 		this.editor = new Editor(200, (html, isPaste) => {
 			const sanitized = htmlSanitizer.sanitizeFragment(html, {blockExternalContent: !isPaste && a.doBlockExternalContent()})
 			this.mentionedInlineImages = sanitized.inlineImageCids
@@ -142,7 +141,7 @@ export class MailEditor implements MComponent<MailEditorAttrs> {
 			this.editor.addChangeListener(() => model.setBody(replaceInlineImagesWithCids(this.editor.getDOM()).innerHTML))
 
 			if (a.templateModel) {
-				a.templateModel.then(templateModel => {
+				a.templateModel.init().then(templateModel => {
 					// add this event listener to handle quick selection of templates inside the editor
 					registerTemplateShortcutListener(this.editor, templateModel)
 					this.areTemplatesInitialized = true
@@ -377,7 +376,7 @@ export class MailEditor implements MComponent<MailEditorAttrs> {
 			onremove: vnode => {
 				model.dispose()
 				this.objectUrls.forEach((url) => URL.revokeObjectURL(url))
-				if (this.templateModel) this.templateModel.then(templateModel => templateModel.dispose())
+				if (this.templateModel) this.templateModel.dispose()
 			},
 			onclick: (e) => {
 				if (e.target === this.editor.getDOM()) {
@@ -446,21 +445,8 @@ export class MailEditor implements MComponent<MailEditorAttrs> {
 
 	openTemplates() {
 		if (this.templateModel) {
-			this.templateModel.then(templateModel => {
-				if (!this.areTemplatesInitialized) {
-					// add this event listener to handle quick selection of templates inside the editor
-					registerTemplateShortcutListener(this.editor, templateModel)
-					this.areTemplatesInitialized = true
-				}
+			this.templateModel.init().then(templateModel => {
 				showTemplatePopupInEditor(templateModel, this.editor, null, this.editor.getSelectedText())
-			})
-		} else {
-			import("../../settings/AddGroupDialog.js").then(({showAddTemplateGroupDialog}) => {
-				showAddTemplateGroupDialog("templateGroupRequired_msg").then(didAddGroup => {
-					if (didAddGroup) {
-						this.templateModel = createTemplateModel(locator.eventController, logins, locator.entityClient)
-					}
-				})
 			})
 		}
 	}
@@ -548,21 +534,20 @@ function createMailEditorDialog(model: SendMailModel, blockExternalContent: bool
 	}
 
 
-	const knowledgeBase = createKnowledgeBaseModel(locator.eventController, logins, locator.entityClient)
 	mailEditorAttrs = createMailEditorAttrs(model,
 		blockExternalContent,
 		model.toRecipients().length !== 0,
 		inlineImages,
 		() => dialog,
+		logins.isInternalUserLoggedIn()
+			? new TemplatePopupModel(locator.eventController, logins, locator.entityClient)
+			: null,
 		// Dont make an empty template model or knowledge base model
-		// TODO createKnowledgeBaseModel should just take an instance of TemplateModel
+		// TODO createKnowledgeBaseModel should just take an instance of TemplatePopupModel
 		logins.getUserController().getTemplateMemberships().length > 0
 			? createKnowledgeBaseModel(locator.eventController, logins, locator.entityClient)
 			: null,
-		logins.getUserController().getTemplateMemberships().length > 0
-			? createTemplateModel(locator.eventController, logins, locator.entityClient)
-			: null,
-	);
+	)
 
 	const shortcuts = [
 		{key: Keys.ESC, exec() { closeButtonAttrs.click(newMouseEvent(), domCloseButton) }, help: "close_alt"},
@@ -575,7 +560,6 @@ function createMailEditorDialog(model: SendMailModel, blockExternalContent: bool
 	for (let shortcut of shortcuts) {
 		dialog.addShortcut(shortcut)
 	}
-
 
 	return dialog
 }

@@ -1383,6 +1383,7 @@ export default {
 
 		"shareTemplateGroupWarning_msg": "All members of the template group will be able to see your name and main email address of your mailbox.",
 		"removeTemplateGroupMemberConfirm_msg": "Are you sure you want to remove {member} from the template group \"{groupName}\"?",
+		"businessFeatureRequiredTemplates_msg": "If you want to add templates, you'll have to order the business feature.",
 
 	}
 }

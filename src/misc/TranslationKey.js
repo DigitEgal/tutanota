@@ -1371,3 +1371,5 @@ export type TranslationKeyType = "about_label"
 
 	| "shareTemplateGroupWarning_msg"
 	| "removeTemplateGroupMemberConfirm_msg"
+
+	| "businessFeatureRequiredTemplates_msg"

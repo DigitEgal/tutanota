@@ -25,7 +25,7 @@ import {elementIdPart, listIdPart} from "../api/common/utils/EntityUtils"
 import {HtmlEditor} from "../gui/editor/HtmlEditor"
 import {UserError} from "../api/main/UserError"
 import type {DropdownChildAttrs} from "../gui/base/DropdownN"
-import {TEMPLATE_SHORTCUT_PREFIX} from "../templates/model/TemplateModel"
+import {TEMPLATE_SHORTCUT_PREFIX} from "../templates/model/TemplatePopupModel"
 
 /**
  *  Editor to edit / add a knowledgeBase entry

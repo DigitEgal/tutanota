@@ -34,7 +34,6 @@ import {UserTypeRef} from "../../entities/sys/User"
 import {EntityRestCache} from "../rest/EntityRestCache"
 import {LockedError, NotAuthorizedError, NotFoundError} from "../../common/error/RestError"
 import {createCalendarDeleteData} from "../../entities/tutanota/CalendarDeleteData"
-import {CalendarPostReturnTypeRef} from "../../entities/tutanota/CalendarPostReturn"
 import {CalendarGroupRootTypeRef} from "../../entities/tutanota/CalendarGroupRoot"
 import {CalendarEventUidIndexTypeRef} from "../../entities/tutanota/CalendarEventUidIndex"
 import {hash} from "../crypto/Sha256"
@@ -43,6 +42,7 @@ import type {CalendarRepeatRule} from "../../entities/tutanota/CalendarRepeatRul
 import {EntityClient} from "../../common/EntityClient"
 import {elementIdPart, getListId, isSameId, listIdPart, uint8arrayToCustomId} from "../../common/utils/EntityUtils";
 import {Request} from "../../common/WorkerProtocol"
+import {CreateGroupPostReturnTypeRef} from "../../entities/tutanota/CreateGroupPostReturn"
 
 assertWorkerOrNode()
 
@@ -200,7 +200,7 @@ export class CalendarFacade {
 			const userGroupKey = this._loginFacade.getUserGroupKey()
 			const calendarData = this._userManagementFacade.generateCalendarGroupData(adminGroupId, adminGroupKey, customerGroupKey, userGroupKey, name)
 			const postData = Object.assign(createCalendarPostData(), {calendarData})
-			return serviceRequest(TutanotaService.CalendarService, HttpMethod.POST, postData, CalendarPostReturnTypeRef)
+			return serviceRequest(TutanotaService.CalendarService, HttpMethod.POST, postData, CreateGroupPostReturnTypeRef)
 				.then((returnData) => this._entity.load(GroupTypeRef, returnData.group))
 				.then((group) => {
 					// remove the user from the cache before loading it again to make sure we get the latest version.

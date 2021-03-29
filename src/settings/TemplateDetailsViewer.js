@@ -18,7 +18,7 @@ import {locator} from "../api/main/MainLocator"
 import {EntityClient} from "../api/common/EntityClient"
 import {TemplateGroupRootTypeRef} from "../api/entities/tutanota/TemplateGroupRoot"
 import {HtmlEditor} from "../gui/editor/HtmlEditor"
-import {TEMPLATE_SHORTCUT_PREFIX} from "../templates/model/TemplateModel"
+import {TEMPLATE_SHORTCUT_PREFIX} from "../templates/model/TemplatePopupModel"
 
 export class TemplateDetailsViewer {
 	isReadOnly: lazy<boolean>

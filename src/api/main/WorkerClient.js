@@ -604,7 +604,7 @@ export class WorkerClient implements EntityRestInterface {
 		return this._leaderStatus.leaderStatus
 	}
 
-	createTemplateGroup(name: string):Promise<void> {
+	createTemplateGroup(name: string):Promise<Id> {
 		return this._postRequest(new Request('createTemplateGroup', arguments))
 	}
 }

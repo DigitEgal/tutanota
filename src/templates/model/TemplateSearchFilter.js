@@ -1,6 +1,6 @@
 //@flow
 import type {EmailTemplate} from "../../api/entities/tutanota/EmailTemplate"
-import {TEMPLATE_SHORTCUT_PREFIX} from "./TemplateModel"
+import {TEMPLATE_SHORTCUT_PREFIX} from "./TemplatePopupModel"
 
 
 export function searchInTemplates(input: string, allTemplates: Array<EmailTemplate>): Array<EmailTemplate> {

@@ -10,7 +10,7 @@ import {OperationType} from "../../api/common/TutanotaConstants"
 import stream from "mithril/stream/stream.js"
 import type {EntityClient} from "../../api/common/EntityClient"
 import type {LoginController} from "../../api/main/LoginController"
-import {getElementId, isSameId} from "../../api/common/utils/EntityUtils"
+import {getElementId, getEtId, haveSameId, isSameId} from "../../api/common/utils/EntityUtils"
 import type {EmailTemplateContent} from "../../api/entities/tutanota/EmailTemplateContent"
 import type {GroupMembership} from "../../api/entities/sys/GroupMembership"
 import {promiseMap} from "../../api/common/utils/PromiseUtils"
@@ -20,6 +20,11 @@ import type {TemplateGroupRoot} from "../../api/entities/tutanota/TemplateGroupR
 import {KnowledgeBaseEntryTypeRef} from "../../api/entities/tutanota/KnowledgeBaseEntry"
 import type {TemplateGroupInstance} from "./TemplateGroupModel"
 import {GroupTypeRef} from "../../api/entities/sys/Group"
+import {LazyLoaded} from "../../api/common/utils/LazyLoaded"
+import {UserTypeRef} from "../../api/entities/sys/User"
+import {logins} from "../../api/main/LoginController"
+import {load} from "../../api/main/Entity"
+import {SETTINGS_PREFIX} from "../../misc/RouteChange"
 
 /**
  *   Model that holds main logic for the Template Feature.
@@ -33,12 +38,12 @@ export type NavAction = "previous" | "next";
 export const SELECT_NEXT_TEMPLATE = "next";
 export const SELECT_PREV_TEMPLATE = "previous";
 
-export class TemplateModel {
+export class TemplatePopupModel {
 	_allTemplates: Array<EmailTemplate>
 	_searchResults: Stream<Array<EmailTemplate>>
 	_selectedTemplate: ?EmailTemplate
 	_templateListId: Id
-	_hasLoaded: boolean
+	initialized: LazyLoaded<TemplatePopupModel>
 	+_eventController: EventController;
 	+_entityEventReceived: EntityEventsListener;
 	+_logins: LoginController;
@@ -47,21 +52,32 @@ export class TemplateModel {
 
 	_selectedContent: ?EmailTemplateContent
 
-	constructor(templates: Array<EmailTemplate>, groupInstances: Array<TemplateGroupInstance>, eventController: EventController, logins: LoginController, entityClient: EntityClient) {
+	constructor(eventController: EventController, logins: LoginController, entityClient: EntityClient) {
 		this._eventController = eventController
 		this._logins = logins
 		this._entityClient = entityClient
 		this._allTemplates = []
 		this._searchResults = stream([])
 		this._selectedTemplate = null
-		this._hasLoaded = false
 
 		this._entityEventReceived = (updates) => {
 			return this._entityUpdate(updates)
 		}
 
-		this._allTemplates = templates
-		this._searchResults(this._allTemplates)
+		this.initialized = new LazyLoaded(() => {
+			const templateMemberships = this._logins.getUserController().getTemplateMemberships()
+			return loadTemplateGroupInstances(templateMemberships, this._entityClient)
+				.then(templateGroupInstances => loadTemplates(templateGroupInstances, this._entityClient)
+					.then(templates => {
+						this._allTemplates = templates
+						this._groupInstances = templateGroupInstances
+					}))
+				.then(() => {
+					this._searchResults(this._allTemplates)
+					return this
+				})
+		})
+
 		this.setSelectedTemplate(this.containsResult() ? this._searchResults()[0] : null)
 		// set selected content to content which includes client language or to first content of selected template
 		this._selectedContent = this._getContentWithClientLanguage()
@@ -69,8 +85,14 @@ export class TemplateModel {
 			: this._selectedTemplate ? this._selectedTemplate.contents[0] : null
 
 		this._eventController.addEntityListener(this._entityEventReceived)
-		this._groupInstances = groupInstances
+	}
 
+	init(): Promise<TemplatePopupModel> {
+		return this.initialized.getAsync()
+	}
+
+	isLoaded(): boolean {
+		return this.initialized.isLoaded()
 	}
 
 	dispose() {
@@ -99,10 +121,6 @@ export class TemplateModel {
 
 	getSelectedContent(): ?EmailTemplateContent {
 		return this._selectedContent
-	}
-
-	hasLoaded(): boolean {
-		return this._hasLoaded
 	}
 
 	getSelectedTemplateIndex(): number {
@@ -179,6 +197,12 @@ export class TemplateModel {
 					findAndRemove(this._allTemplates, (t) => isSameId(getElementId(t), update.instanceId))
 					this._searchResults(this._allTemplates)
 				}
+			} else if (isUpdateForTypeRef(UserTypeRef, update) && isSameId(update.instanceId, logins.getUserController().user._id)) {
+				// template group memberships may have changed
+				if (this._groupInstances.length !== logins.getUserController().getTemplateMemberships().length) {
+					this.initialized.reset()
+					return this.initialized.getAsync()
+				}
 			}
 		})
 	}
@@ -186,26 +210,13 @@ export class TemplateModel {
 	getTemplateGroupInstances(): Array<TemplateGroupInstance> {
 		return this._groupInstances
 	}
-}
 
-/**
- * Load all templates from all Template Groups to which the User belongs, then create a TemplateModel with them
- * If a user is added to another TemplateGroup, this Model will not see, and a new one must be created
- * @param eventController
- * @param logins
- * @param entityClient
- * @param templateGroupModel
- * @returns {Promise<*>|Promise<*|TemplateModel>|Promise<TemplateModel>}
- */
-export function createTemplateModel(eventController: EventController,
-                                    logins: LoginController,
-                                    entityClient: EntityClient): Promise<TemplateModel> {
-	const templateMemberships = logins.getUserController().getTemplateMemberships()
-	return loadTemplateGroupInstances(templateMemberships, entityClient).then(templateGroupInstances => {
-		return promiseMap(templateGroupInstances, instance => instance.groupRoot)
-			.then(groupRoots => loadTemplates(groupRoots, entityClient)
-				.then(templates => new TemplateModel(templates, templateGroupInstances, eventController, logins, entityClient)))
-	})
+	getSelectedTemplateGroupInstance(): ?TemplateGroupInstance {
+		const selected = this.getSelectedTemplate()
+		return selected
+			? this._groupInstances.find(instance => isSameId(getEtId(instance.userGroup), selected._ownerGroup))
+			: null
+	}
 }
 
 export function loadTemplateGroupInstances(memberships: Array<GroupMembership>, entityClient: EntityClient): Promise<Array<TemplateGroupInstance>> {
@@ -228,8 +239,8 @@ export function loadTemplateGroupInstance(groupMembership: GroupMembership, enti
 			                                           })))
 }
 
-function loadTemplates(templateGroups: Array<TemplateGroupRoot>, entityClient: EntityClient): Promise<Array<EmailTemplate>> {
-	return promiseMap(templateGroups, group => entityClient.loadAll(EmailTemplateTypeRef, group.templates))
+function loadTemplates(templateGroups: Array<TemplateGroupInstance>, entityClient: EntityClient): Promise<Array<EmailTemplate>> {
+	return promiseMap(templateGroups, group => entityClient.loadAll(EmailTemplateTypeRef, group.groupRoot.templates))
 		.then(groupedTemplates => groupedTemplates.flat())
 }
 

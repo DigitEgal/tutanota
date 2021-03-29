@@ -17,7 +17,7 @@ import type {TemplateGroupRoot} from "../api/entities/tutanota/TemplateGroupRoot
 import {EntityClient} from "../api/common/EntityClient"
 import {isSameId} from "../api/common/utils/EntityUtils"
 import {createEmailTemplateContent} from "../api/entities/tutanota/EmailTemplateContent"
-import {TEMPLATE_SHORTCUT_PREFIX} from "../templates/model/TemplateModel"
+import {TEMPLATE_SHORTCUT_PREFIX} from "../templates/model/TemplatePopupModel"
 import {hasCapabilityOnGroup} from "../sharing/GroupUtils"
 import {ShareCapability} from "../api/common/TutanotaConstants"
 import type {TemplateGroupInstance} from "../templates/model/TemplateGroupModel"

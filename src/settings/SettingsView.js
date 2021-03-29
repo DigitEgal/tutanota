@@ -13,9 +13,8 @@ import {MailSettingsViewer} from "./MailSettingsViewer"
 import {UserListView} from "./UserListView"
 import type {User} from "../api/entities/sys/User"
 import {UserTypeRef} from "../api/entities/sys/User"
-import {load, serviceRequestVoid} from "../api/main/Entity"
+import {serviceRequestVoid} from "../api/main/Entity"
 import {Button} from "../gui/base/Button"
-import type {ButtonAttrs} from "../gui/base/ButtonN"
 import {ButtonColors} from "../gui/base/ButtonN"
 import {logins} from "../api/main/LoginController"
 import {GroupListView} from "./GroupListView"
@@ -43,11 +42,11 @@ import {AboutDialog} from "./AboutDialog"
 import {navButtonRoutes, SETTINGS_PREFIX} from "../misc/RouteChange"
 import {size} from "../gui/size"
 import {FolderColumnView} from "../gui/base/FolderColumnView"
-import {getEtId, getId, isSameId} from "../api/common/utils/EntityUtils";
+import {getEtId, isSameId} from "../api/common/utils/EntityUtils";
 import {TemplateListView} from "./TemplateListView"
 import {KnowledgeBaseListView} from "./KnowledgeBaseListView"
 import {promiseMap} from "../api/common/utils/PromiseUtils"
-import {loadTemplateGroupInstances} from "../templates/model/TemplateModel"
+import {loadTemplateGroupInstances} from "../templates/model/TemplatePopupModel"
 import {showAddTemplateGroupDialog} from "./AddGroupDialog"
 import type {TemplateGroupInstance} from "../templates/model/TemplateGroupModel"
 import {showGroupSharingDialog} from "../sharing/view/GroupSharingDialog"
@@ -57,11 +56,9 @@ import {GroupInvitationFolderRow} from "../sharing/view/GroupInvitationFolderRow
 import {SidebarSection} from "../gui/SidebarSection"
 import {ReceivedGroupInvitationsModel} from "../sharing/model/ReceivedGroupInvitationsModel"
 import {createTemplateGroupDeleteData} from "../api/entities/tutanota/TemplateGroupDeleteData"
-import {isSharedGroupOwner, TemplateGroupPreconditionFailedReason} from "../sharing/GroupUtils"
-import {SysService} from "../api/entities/sys/Services"
+import {getSharedGroupName, isSharedGroupOwner} from "../sharing/GroupUtils"
 import {HttpMethod} from "../api/common/EntityFunctions"
 import {TutanotaService} from "../api/entities/tutanota/Services"
-import {PreconditionFailedError} from "../api/common/error/RestError"
 import {showProgressDialog} from "../gui/ProgressDialog"
 import {worker} from "../api/main/WorkerClient"
 
@@ -337,25 +334,24 @@ export class SettingsView implements CurrentView {
 	entityEventsReceived<T>(updates: $ReadOnlyArray<EntityUpdateData>): Promise<void> {
 		return promiseMap(updates, update => {
 			if (isUpdateForTypeRef(UserTypeRef, update) && isSameId(update.instanceId, logins.getUserController().user._id)) {
-				return load(UserTypeRef, update.instanceId).then(user => {
-					// the user admin status might have changed
-					if (!this._isGlobalOrLocalAdmin(user) && this._currentViewer
-						&& this._adminFolders.find(f => f.isActive())) {
-						this._setUrl(this._userFolders[0].url)
-					}
-					// template group memberships may have changed
-					if (this._templateFolders.length !== logins.getUserController().getTemplateMemberships().length) {
-						Promise.all([this._makeTemplateFolders(), this._makeKnowledgeBaseFolders()])
-						       .then(([templates, knowledgeBases]) => {
-							       this._templateFolders = templates
-							       this._knowledgeBaseFolders = knowledgeBases
-							       if (m.route.get().startsWith(SETTINGS_PREFIX)) {
-								       this._setUrl(m.route.get())
-							       }
-						       })
-					}
-					m.redraw()
-				})
+				const user = logins.getUserController().user
+				// the user admin status might have changed
+				if (!this._isGlobalOrLocalAdmin(user) && this._currentViewer
+					&& this._adminFolders.find(f => f.isActive())) {
+					this._setUrl(this._userFolders[0].url)
+				}
+				// template group memberships may have changed
+				if (this._templateFolders.length !== logins.getUserController().getTemplateMemberships().length) {
+					Promise.all([this._makeTemplateFolders(), this._makeKnowledgeBaseFolders()])
+					       .then(([templates, knowledgeBases]) => {
+						       this._templateFolders = templates
+						       this._knowledgeBaseFolders = knowledgeBases
+						       if (m.route.get().startsWith(SETTINGS_PREFIX)) {
+							       this._setUrl(m.route.get())
+						       }
+					       })
+				}
+				m.redraw()
 			} else if (isUpdateForTypeRef(CustomerInfoTypeRef, update)) {
 				this._customDomains.reset()
 				return this._customDomains.getAsync().then(() => m.redraw())
@@ -408,7 +404,7 @@ export class SettingsView implements CurrentView {
 		const templateMemberships = logins.getUserController() && logins.getUserController().getTemplateMemberships() || []
 		return promiseMap(loadTemplateGroupInstances(templateMemberships, locator.entityClient),
 			groupInstance =>
-				new SettingsFolder(() => groupInstance.groupInfo.name,
+				new SettingsFolder(() => getSharedGroupName(groupInstance.groupInfo, true),
 					() => Icons.ListAlt,
 					`template-${groupInstance.groupInfo.name}`,
 					() => new TemplateListView(this, groupInstance, locator.entityClient, logins),
@@ -420,7 +416,7 @@ export class SettingsView implements CurrentView {
 		const templateMemberships = logins.getUserController() && logins.getUserController().getTemplateMemberships() || []
 		return promiseMap(loadTemplateGroupInstances(templateMemberships, locator.entityClient),
 			groupInstance =>
-				new SettingsFolder(() => groupInstance.groupInfo.name,
+				new SettingsFolder(() => getSharedGroupName(groupInstance.groupInfo, true),
 					() => Icons.Book,
 					`knowledgeBase-${groupInstance.groupInfo.name}`,
 					() => new KnowledgeBaseListView(this, locator.entityClient, logins, groupInstance.groupRoot, groupInstance.userGroup)))

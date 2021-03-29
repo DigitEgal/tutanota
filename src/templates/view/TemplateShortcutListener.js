@@ -4,7 +4,7 @@ import {Editor} from "../../gui/editor/Editor"
 import {isKeyPressed} from "../../misc/KeyManager"
 import {downcast} from "../../api/common/utils/Utils"
 import {Keys} from "../../api/common/TutanotaConstants"
-import {TEMPLATE_SHORTCUT_PREFIX, TemplateModel} from "../model/TemplateModel"
+import {TEMPLATE_SHORTCUT_PREFIX, TemplatePopupModel} from "../model/TemplatePopupModel"
 import {lang, languageByCode, LanguageViewModel} from "../../misc/LanguageViewModel"
 import {ButtonType} from "../../gui/base/ButtonN"
 import {DropdownN} from "../../gui/base/DropdownN"
@@ -12,7 +12,7 @@ import {modal} from "../../gui/base/Modal"
 import {showTemplatePopupInEditor} from "./TemplatePopup"
 import {firstThrow} from "../../api/common/utils/ArrayUtils"
 
-export function registerTemplateShortcutListener(editor: Editor, templateModel: TemplateModel): TemplateShortcutListener {
+export function registerTemplateShortcutListener(editor: Editor, templateModel: TemplatePopupModel): TemplateShortcutListener {
 	const listener = new TemplateShortcutListener(editor, templateModel, lang)
 	editor.addEventListener("keydown", (event) => listener.handleKeyDown(event))
 	editor.addEventListener("cursor", (event) => listener.handleCursorChange(event))
@@ -23,10 +23,10 @@ export function registerTemplateShortcutListener(editor: Editor, templateModel: 
 class TemplateShortcutListener {
 	_currentCursorPosition: ?Range
 	_editor: Editor
-	_templateModel: TemplateModel
+	_templateModel: TemplatePopupModel
 	_lang: LanguageViewModel
 
-	constructor(editor: Editor, templateModel: TemplateModel, lang: LanguageViewModel) {
+	constructor(editor: Editor, templateModel: TemplatePopupModel, lang: LanguageViewModel) {
 		this._editor = editor
 		this._currentCursorPosition = null
 		this._templateModel = templateModel

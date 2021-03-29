@@ -26,7 +26,7 @@ import type {Contact} from "../../api/entities/tutanota/Contact"
 import type {RecipientInfo} from "../../api/common/RecipientInfo"
 import {
 	getCapabilityText,
-	getGroupName,
+	getSharedGroupName,
 	getMemberCabability,
 	hasCapabilityOnGroup, isShareableGroupType,
 	isSharedGroupOwner,
@@ -82,7 +82,7 @@ class GroupSharingDialogContent implements MComponent<GroupSharingDialogAttrs> {
 
 	view(vnode: Vnode<GroupSharingDialogAttrs>): Children {
 		const {model, allowGroupNameOverride, texts} = vnode.attrs
-		const groupName = getGroupName(model.info, allowGroupNameOverride)
+		const groupName = getSharedGroupName(model.info, allowGroupNameOverride)
 		return m(".flex.col.pt-s", [
 			m(TableN, {
 				columnHeading: [() => texts.participantsLabel(groupName)],
@@ -183,8 +183,8 @@ function showAddParticipantDialog(model: GroupSharingModel, texts: GroupSharingT
 		}
 	}, locator.contactModel))
 	const capability: Stream<ShareCapabilityEnum> = stream(ShareCapability.Read)
-	const realGroupName = getGroupName(model.info, false)
-	const customGroupName = getGroupName(model.info, true)
+	const realGroupName = getSharedGroupName(model.info, false)
+	const customGroupName = getSharedGroupName(model.info, true)
 
 	let dialog = Dialog.showActionDialog({
 

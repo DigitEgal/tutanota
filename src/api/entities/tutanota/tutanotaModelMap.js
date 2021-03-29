@@ -99,7 +99,7 @@ const map: {[string]: () => mixed} = {
     GroupSettings: () => import('./GroupSettings'),
     UserSettingsGroupRoot: () => import('./UserSettingsGroupRoot'),
     CalendarDeleteData: () => import('./CalendarDeleteData'),
-    CalendarPostReturn: () => import('./CalendarPostReturn'),
+    CreateGroupPostReturn: () => import('./CreateGroupPostReturn'),
     SharedGroupData: () => import('./SharedGroupData'),
     GroupInvitationPostData: () => import('./GroupInvitationPostData'),
     GroupInvitationPostReturn: () => import('./GroupInvitationPostReturn'),
