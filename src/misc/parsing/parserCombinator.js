@@ -11,6 +11,9 @@ export class ParserError extends TutanotaError {
 	constructor(message: string, filename?: string) {
 		super("ParserError", message)
 		this.filename = filename
+
+		console.log(this.message)
+		console.log("-----------------------")
 	}
 }
 
@@ -139,7 +142,7 @@ export function makeOneOfCharactersParser(allowed: Array<string>): Parser<string
 			iterator.next()
 			return value
 		}
-		throw new ParserError(`Expected one of ${String(allowed)}, got ${value}`)
+		throw new ParserError(`Expected one of ${allowed.map(c => `"${c}"`).join(", ")}, but got "${value}\n${context(iterator, iterator.position, 10)}"`)
 	}
 }
 
@@ -154,7 +157,7 @@ export function makeNotOneOfCharactersParser(notAllowed: Array<string>): Parser<
 			iterator.next()
 			return value
 		}
-		throw new ParserError(`Expected not one of ${String(notAllowed)}, but got it`)
+		throw new ParserError(`Expected none of ${notAllowed.map(c => `"${c}"`).join(", ")}, but got "${value}"\n${context(iterator, iterator.position, 10)}`)
 	}
 }
 
@@ -184,4 +187,17 @@ export class StringIterator {
 	peek(): string {
 		return this.iteratee[this.position + 1]
 	}
+}
+
+function context(iterator: StringIterator, contextCentre: number, contextRadius: number = 10): string {
+	const sliceStart = Math.max(contextCentre - contextRadius, 0)
+	const sliceEnd = Math.min(contextCentre + contextRadius, iterator.iteratee.length - 1)
+	const sliceLength = sliceEnd - sliceStart
+	const actualPosition = contextCentre - (2 * contextRadius - sliceLength)
+	const context = iterator.iteratee.slice(sliceStart, sliceEnd)
+	const locator = new Array(actualPosition - sliceStart).fill().map(_ => " ").join()
+		+ "^"
+		+ new Array(sliceEnd - actualPosition).fill().map(_ => " ").join("")
+
+	return context + "\n" + locator
 }

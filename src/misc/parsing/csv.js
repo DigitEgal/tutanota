@@ -33,7 +33,7 @@ export function parseCsv(input: string, options?: $Shape<CsvParseOptions>): Pars
 
 	const lineDelimiterParser = makeCharacterParser("\n")
 	const parser = makeSeparatedByParser(lineDelimiterParser, makeRowParser(delimiter))
-	const rows = parser(new StringIterator(input.replace(/\r\n/g, "\n"))).map(row => row.map(col => col.trim()))
+	const rows = parser(new StringIterator(input.replace(/\r\n/g, "\n")))
 	return {rows: rows}
 }
 
@@ -42,7 +42,7 @@ function makeRowParser(delimiter: string): Parser<Array<string>> {
 }
 
 function makeColumnParser(delimiter: string): Parser<string> {
-	return makeAnyParser(makeEmptyColumnParser(delimiter), quotedColumnParser, makeUnquotedColumnParser(delimiter))
+	return makeAnyParser(makeEmptyColumnParser(delimiter), makeTrimSpacesParser(quotedColumnParser), makeUnquotedColumnParser(delimiter))
 }
 
 /**
@@ -58,8 +58,8 @@ function makeEmptyColumnParser(delimiter: string): Parser<string> {
 			return ""
 		}
 
-		iterator.position -= 1
 		if (value === delimiter) {
+			iterator.position -= 1
 			return ""
 		} else {
 			throw new ParserError("not an empty column")
@@ -73,7 +73,8 @@ function makeEmptyColumnParser(delimiter: string): Parser<string> {
  * @returns {Parser<*>}
  */
 function makeUnquotedColumnParser(delimiter: string): Parser<string> {
-	return mapParser(makeOneOrMoreParser(makeNotOneOfCharactersParser(['"', '\n', delimiter])), arr => arr.join(""))
+	// We don't use trim spaces parser because it won't remove trailing spaces in this case
+	return mapParser(makeOneOrMoreParser(makeNotOneOfCharactersParser(['"', '\n', delimiter])), arr => arr.join("").trim())
 }
 
 
@@ -84,7 +85,7 @@ function makeUnquotedColumnParser(delimiter: string): Parser<string> {
  */
 function quotedColumnParser(iterator: StringIterator): string {
 	const initial = iterator.next()
-	if (initial.done || initial.value === '"') {
+	if (initial.done || initial.value !== '"') {
 		throw new ParserError("expected quote")
 	}
 
@@ -114,4 +115,20 @@ function quotedColumnParser(iterator: StringIterator): string {
 	}
 
 	return result
+}
+
+function makeTrimSpacesParser(parser: Parser<string>): Parser<string> {
+	return function (iterator: StringIterator) {
+		while (iterator.peek() === "") {
+			iterator.next()
+		}
+
+		const result = parser(iterator)
+
+		while (iterator.peek() === "") {
+			iterator.next()
+		}
+
+		return result
+	}
 }
