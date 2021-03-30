@@ -536,7 +536,7 @@ export class CalendarView implements CurrentView {
 
 	_createCalendarActionDropdown(calendarInfo: CalendarInfo, colorValue: string, existingGroupSettings: ?GroupSettings, userSettingsGroupRoot: UserSettingsGroupRoot, sharedCalendar: boolean): Children {
 		const {group, groupInfo, groupRoot} = calendarInfo
-		return moreButton(() => [
+		return m(ButtonN, moreButton(() => [
 				{
 					label: "edit_action",
 					icon: () => Icons.Edit,
@@ -587,7 +587,7 @@ export class CalendarView implements CurrentView {
 					type: ButtonType.Dropdown,
 				},
 			].filter(Boolean)
-		)
+		))
 	}
 
 	_confirmDeleteCalendar(calendarInfo: CalendarInfo) {

@@ -6,6 +6,7 @@ import {px} from "../../gui/size"
 import type {Shortcut} from "../../misc/KeyManager"
 import {isKeyPressed} from "../../misc/KeyManager"
 import type {PosRect} from "../../gui/base/Dropdown"
+import {DomRectReadOnlyPolyfilled} from "../../gui/base/Dropdown"
 import type {TextFieldAttrs} from "../../gui/base/TextFieldN"
 import stream from "mithril/stream/stream.js"
 import {Keys, ShareCapability} from "../../api/common/TutanotaConstants"
@@ -25,13 +26,10 @@ import {downcast, neverNull, noOp} from "../../api/common/utils/Utils"
 import {locator} from "../../api/main/MainLocator"
 import {TemplateGroupRootTypeRef} from "../../api/entities/tutanota/TemplateGroupRoot"
 import {TemplateSearchBar} from "./TemplateSearchBar"
-import {DomRectReadOnlyPolyfilled} from "../../gui/base/Dropdown"
 import {Editor} from "../../gui/editor/Editor"
 import {logins} from "../../api/main/LoginController"
-import {showBusinessFeatureRequiredDialog} from "../../misc/SubscriptionDialogs"
-import {worker} from "../../api/main/WorkerClient"
-import type {TemplateGroupRoot} from "../../api/entities/tutanota/TemplateGroupRoot"
 import {getSharedGroupName, hasCapabilityOnGroup} from "../../sharing/GroupUtils"
+import {createInitialTemplateListIfAllowed} from "../TemplateGroupUtils"
 
 export const TEMPLATE_POPUP_HEIGHT = 340;
 export const TEMPLATE_POPUP_TWO_COLUMN_MIN_WIDTH = 600;
@@ -74,7 +72,6 @@ export function showTemplatePopupInEditor(templateModel: TemplatePopupModel, edi
 export class TemplatePopup implements ModalComponent {
 	_rect: PosRect
 	_filterTextAttrs: TextFieldAttrs
-	_addTemplateButtonAttrs: ButtonAttrs
 	_shortcuts: Shortcut[]
 	_scrollDom: HTMLElement
 	_onSelect: (string) => void
@@ -254,7 +251,7 @@ export class TemplatePopup implements ModalComponent {
 			return {
 				label: "createTemplate_action",
 				click: () => {
-					createTemplatesIfAllowed().then(groupRoot => {
+					createInitialTemplateListIfAllowed().then(groupRoot => {
 						if (groupRoot) {
 							import("../../settings/TemplateEditor").then(editor => {
 								editor.showTemplateEditor(null, groupRoot)
@@ -472,21 +469,3 @@ export class TemplatePopup implements ModalComponent {
 }
 
 
-/**
- * @return True if the group has been created.
- */
-function createTemplatesIfAllowed(): Promise<?TemplateGroupRoot> {
-	return import("../../sharing/GroupUtils").then(({isUsingBusinessFeatureAllowed}) => {
-		return logins.getUserController().loadCustomer().then(customer => {
-			return isUsingBusinessFeatureAllowed(customer) || showBusinessFeatureRequiredDialog("businessFeatureRequiredTemplates_msg")
-		}).then(allowed => {
-			if (allowed) {
-				return worker.createTemplateGroup("")
-			}
-		}).then(groupId => {
-			if (groupId) {
-				return locator.entityClient.load(TemplateGroupRootTypeRef, groupId)
-			}
-		})
-	})
-}

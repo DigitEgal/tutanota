@@ -29,11 +29,15 @@ export type NavButtonAttrs = {|
 	hideLabel?: boolean,
 	vertical?: boolean,
 	fontSize?: number,
+	enabled?: boolean
 |}
 
-const navButtonSelector = (vertical) =>
-	"a.nav-button.noselect.flex-start.flex-no-shrink.items-center.click.plr-button.no-text-decoration.button-height"
-	+ (vertical ? ".col" : "")
+function getNavButtonSelector(vertical: boolean, enabled: boolean) {
+	return "a.nav-button.noselect.flex-start.flex-no-shrink.items-center.click.plr-button.no-text-decoration.button-height"
+		+ (vertical ? ".col" : "")
+		+ (enabled ? "" : ".no-pointer")
+
+}
 
 export class NavButtonN implements MComponent<NavButtonAttrs> {
 	_domButton: HTMLElement;
@@ -49,9 +53,16 @@ export class NavButtonN implements MComponent<NavButtonAttrs> {
 
 	view(vnode: Vnode<NavButtonAttrs>): Children {
 		const a = vnode.attrs
+
+		const enabled = a.enabled !== false
+
 		// allow nav button without label for registration button on mobile devices
-		return m((this._isExternalUrl(a.href) ? navButtonSelector(vnode.attrs.vertical) : m.route.Link),
-			this.createButtonAttributes(a),
+
+		const component = this._isExternalUrl(a.href)
+			? getNavButtonSelector(!!vnode.attrs.vertical, enabled)
+			: m.route.Link
+
+		return m(component, this.createButtonAttributes(a, enabled),
 			[
 				a.icon() ? m(Icon, {
 					icon: a.icon(),
@@ -88,7 +99,7 @@ export class NavButtonN implements MComponent<NavButtonAttrs> {
 		return url != null ? url.indexOf("http") === 0 : false
 	}
 
-	createButtonAttributes(a: NavButtonAttrs): any {
+	createButtonAttributes(a: NavButtonAttrs, enabled: boolean): any {
 		let attr: any = {
 			role: "button", // role button for screen readers
 			href: this._getUrl(a.href),
@@ -107,7 +118,7 @@ export class NavButtonN implements MComponent<NavButtonAttrs> {
 			onremove: (vnode) => {
 				removeFlash(vnode.dom)
 			},
-			selector: navButtonSelector(a.vertical),
+			selector: getNavButtonSelector(!!a.vertical, enabled),
 			onclick: (e) => this.click(e, a),
 			onkeyup: (e) => {
 				if (isKeyPressed(e.keyCode, Keys.SPACE)) {

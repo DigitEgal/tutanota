@@ -299,3 +299,22 @@ export function binarySearch<T>(ar: Array<T>, el: T, compare_fn: (T, T) => numbe
 export function union<T>(...iterables: Array<Iterable<T>>): Set<T> {
 	return new Set(...iterables.map(iterable => Array.from(iterable)))
 }
+
+/**
+ * Splits an array into two based on a predicate, where elements that match the predicate go into the left side
+ * @param array
+ * @param predicate
+ */
+export function partition<T>(array: Array<T>, predicate: T => boolean): [Array<T>, Array<T>] {
+	const left = []
+	const right = []
+	for (let item of array) {
+		if (predicate(item)) {
+			left.push(item)
+		} else {
+			right.push(item)
+		}
+	}
+
+	return [left, right]
+}

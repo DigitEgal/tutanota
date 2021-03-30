@@ -127,7 +127,6 @@ function addTemplateGroup(name: string): Promise<boolean> {
 export function showAddTemplateGroupDialog(message: TranslationKey = "createTemplateGroup_msg"): Promise<boolean> {
 
 	return new Promise(resolve => {
-
 		const addGroupOkAction = (dialog) => {
 			addTemplateGroup(nameField.value()).then(success => {
 				if (success) {
@@ -138,7 +137,6 @@ export function showAddTemplateGroupDialog(message: TranslationKey = "createTemp
 		}
 
 		const cancelAction = () => resolve(false)
-
 		let nameField = new TextField("name_label")
 		let form = {
 			view: () => {
@@ -150,7 +148,7 @@ export function showAddTemplateGroupDialog(message: TranslationKey = "createTemp
 		}
 
 		Dialog.showActionDialog({
-			title: lang.get("addGroup_label"),
+			title: lang.get("newTemplateList_msg"),
 			child: form,
 			validator: () => _validateAddGroupInput(GroupType.Template, nameField.value(), null),
 			okAction: addGroupOkAction,

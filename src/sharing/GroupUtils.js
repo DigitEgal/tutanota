@@ -102,7 +102,7 @@ export function getDefaultGroupName(groupType: GroupTypeEnum): string {
 		case GroupType.Calendar:
 			return lang.get("privateCalendar_label")
 		case GroupType.Template:
-			return lang.get("template_label")
+			return lang.get("templateGroupDefaultName_label")
 		default:
 			return groupTypeToString(groupType)
 	}

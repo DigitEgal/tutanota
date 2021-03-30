@@ -13,6 +13,7 @@ import type {MaybeLazy} from "../../api/common/utils/Utils"
 import {mapLazily, noOp} from "../../api/common/utils/Utils"
 import {promiseMap} from "../../api/common/utils/PromiseUtils"
 import {Dialog} from "./Dialog"
+import type {ButtonAttrs} from "./ButtonN"
 
 // TODO Use DropDownSelectorN
 export function createCountryDropdown(selectedCountry: Stream<?Country>, helpLabel?: lazy<string>, label: TranslationKey | lazy<string> = "invoiceCountry_label"): DropDownSelector<?Country> {
@@ -30,8 +31,8 @@ export function createCountryDropdown(selectedCountry: Stream<?Country>, helpLab
 	return countryInput
 }
 
-export function moreButton(lazyChildren: MaybeLazy<$Promisable<$ReadOnlyArray<?DropdownChildAttrs>>>): Children {
-	return m(ButtonN, attachDropdown({
+export function moreButton(lazyChildren: MaybeLazy<$Promisable<$ReadOnlyArray<?DropdownChildAttrs>>>): ButtonAttrs {
+	return attachDropdown({
 		label: "more_label",
 		colors: ButtonColors.Nav,
 		click: noOp,
@@ -41,7 +42,7 @@ export function moreButton(lazyChildren: MaybeLazy<$Promisable<$ReadOnlyArray<?D
 			? child
 			// If type hasn't been bound on the child it get's set to Dropdown, otherwise we use what is already there
 			: Object.assign({}, {type: ButtonType.Dropdown}, child))
-	)))
+	))
 }
 
 

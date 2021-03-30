@@ -1126,7 +1126,9 @@ styles.registerStyle('main', () => {
 			'box-sizing': 'content-box',
 			'cursor': 'pointer',
 		},
-
+		'.no-pointer': {
+			'pointer-events': 'none'
+		},
 		'.fade-in': {
 			opacity: 1,
 			'animation-name': 'fadeInOpacity',

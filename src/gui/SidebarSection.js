@@ -9,7 +9,7 @@ import {theme} from "./theme"
 
 export type SidebarSectionAttrs = {
 	label: TranslationKey | lazy<string>,
-	buttonAttrs?: ButtonAttrs
+	buttonAttrs?: ?ButtonAttrs
 }
 
 export class SidebarSection implements MComponent<SidebarSectionAttrs> {

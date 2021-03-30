@@ -35,6 +35,7 @@ import {promiseMap, tap} from "../../api/common/utils/PromiseUtils"
 import {AsyncResult} from "../../api/common/utils/AsyncResult"
 import {deduplicateFilenames} from "../../api/common/utils/FileUtils"
 import {makeMailBundle} from "../export/Bundler"
+import {ListColumnWrapper} from "../../gui/ListColumnWrapper"
 
 assertMainOrNode()
 
@@ -300,14 +301,14 @@ export class MailListView implements Component {
 			}
 		}
 
+
 		return this.showingTrashOrSpamFolder()
-			? m(".flex.flex-column.fill-absolute", [
-				m(".flex.flex-column.justify-center.plr-l.list-border-right.list-bg.list-header", [
+			? m(ListColumnWrapper, {
+				headerContent: [
 					m(".small.flex-grow.pt", lang.get("storageDeletion_msg")),
 					m(".mr-negative-s.align-self-end", m(ButtonN, purgeButtonAttrs))
-				]),
-				m(".rel.flex-grow", m(this.list))
-			])
+				]
+			}, m(".rel.flex-grow", m(this.list)))
 			: m(this.list)
 	}
 

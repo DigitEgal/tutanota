@@ -9,15 +9,17 @@ import {ButtonN} from "../../gui/base/ButtonN"
 import {showGroupInvitationDialog} from "./ReceivedGroupInvitationDialog"
 import {Icons} from "../../gui/base/icons/Icons"
 import type {ReceivedGroupInvitation} from "../../api/entities/sys/ReceivedGroupInvitation"
+import type {AllIconsEnum} from "../../gui/base/Icon"
 
 export type GroupInvitationFolderRowAttrs = {
-	invitation: ReceivedGroupInvitation
+	invitation: ReceivedGroupInvitation,
+	icon?: AllIconsEnum
 }
 
 export class GroupInvitationFolderRow implements MComponent<GroupInvitationFolderRowAttrs> {
 
 	view(vnode: Vnode<GroupInvitationFolderRowAttrs>): Children {
-		const {invitation} = vnode.attrs
+		const {invitation, icon} = vnode.attrs
 
 		return [
 			m(".folder-row.flex-start.plr-l", [
@@ -35,7 +37,7 @@ export class GroupInvitationFolderRow implements MComponent<GroupInvitationFolde
 				m(ButtonN, {
 					label: "show_action",
 					click: () => showGroupInvitationDialog(invitation),
-					icon: () => Icons.Eye
+					icon: () => icon ? icon : Icons.Eye
 				})
 			])
 		]

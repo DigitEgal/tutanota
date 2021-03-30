@@ -10,8 +10,6 @@ import {ProgrammingError} from "../api/common/error/ProgrammingError"
 export type GroupSharingTexts = {
 	+groupNameLabel: TranslationKey,
 	+participantsLabel: (groupName: string) => string,
-	+defaultGroupName: string,
-
 	+acceptEmailSubject: string,
 	+acceptEmailBody: (userName: string, invitee: string, groupName: string) => string,
 	+declineEmailSubject: string,
@@ -31,7 +29,6 @@ export type GroupSharingTexts = {
 const CALENDAR_SHARING_TEXTS: lazy<GroupSharingTexts> = () => ({
 	groupNameLabel: "calendarName_label",
 	participantsLabel: (groupName) => lang.get("participants_label", {"{name}": groupName}),
-	defaultGroupName: lang.get("privateCalendar_label"),
 	acceptEmailSubject: lang.get("shareCalendarAcceptEmailSubject_msg"),
 	acceptEmailBody: (userName, invitee, groupName) => lang.get("shareCalendarAcceptEmailBody_msg", {
 		"{invitee}": invitee,
@@ -64,7 +61,6 @@ const CALENDAR_SHARING_TEXTS: lazy<GroupSharingTexts> = () => ({
 const TEMPLATE_SHARING_TEXTS: lazy<GroupSharingTexts> = () => ({
 	groupNameLabel: "templateGroupName_label",
 	participantsLabel: (groupName) => lang.get("templateGroupParticipants_label", {"{groupName}": groupName}),
-	defaultGroupName: lang.get("template_label"),
 	acceptEmailSubject: lang.get("acceptTemplateGroupEmailSubject_msg"),
 	acceptEmailBody: (userName, invitee, groupName) => lang.get("acceptTemplateGroupEmailBody_msg", {
 		"{recipientName}": userName,
@@ -87,8 +83,8 @@ const TEMPLATE_SHARING_TEXTS: lazy<GroupSharingTexts> = () => ({
 		"{member}": member,
 		"{groupName}": groupName
 	}),
-	sharingNotOrderedUser: lang.get("templateSharingNotOrderedUser_msg"),
-	sharingNotOrderedAdmin: lang.get("templateSharingNotOrderedAdmin_msg"),
+	sharingNotOrderedUser: lang.get("templateSharingNotOrdered_msg"),
+	sharingNotOrderedAdmin: lang.get("templateSharingNotOrdered_msg"),
 	alreadyGroupMemberMessage: "alreadyTemplateGroupMember_msg",
 	receivedGroupInvitationMessage: `${lang.get("shareTemplateGroupWarning_msg")} ${lang.get("shareCalendarWarningAliases_msg")}`
 })

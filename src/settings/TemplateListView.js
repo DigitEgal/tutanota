@@ -22,6 +22,7 @@ import {hasCapabilityOnGroup} from "../sharing/GroupUtils"
 import {ShareCapability} from "../api/common/TutanotaConstants"
 import type {TemplateGroupInstance} from "../templates/model/TemplateGroupModel"
 import type {LoginController} from "../api/main/LoginController"
+import {ListColumnWrapper} from "../gui/ListColumnWrapper"
 
 assertMainOrNode()
 
@@ -69,7 +70,6 @@ export class TemplateListView implements UpdatableSettingsViewer {
 					this._settingsView.detailsViewer = null
 					m.redraw()
 				}
-
 			},
 			createVirtualRow: () => {
 				return new TemplateRow()
@@ -97,31 +97,30 @@ export class TemplateListView implements UpdatableSettingsViewer {
 	view(): Children {
 		const templateGroupRoot = this._groupInstance.groupRoot
 		const entityClient = this._entityClient
-		return m(".flex.flex-column.fill-absolute", [
-			m(".flex.flex-column.justify-center.plr-l.list-border-right.list-bg.list-header",
-				this.userCanEdit()
-					? m(".flex.flex-end.center-vertically", [
-						m(".mr-negative-s", m("input[type=file][name=test]", {
-							onchange: function () {
-								const reader = new FileReader()
-								reader.onload = () => {
-									let array = parseCSV(String(reader.result))
-									createTemplates(array, templateGroupRoot, entityClient)
-								}
-								reader.readAsBinaryString(this.files[0])
+
+		return m(ListColumnWrapper, {
+			headerContent: this.userCanEdit()
+				? m(".flex.flex-end.center-vertically", [
+					m(".mr-negative-s", m("input[type=file][name=test]", {
+						onchange: function () {
+							const reader = new FileReader()
+							reader.onload = () => {
+								let array = parseCSV(String(reader.result))
+								createTemplates(array, templateGroupRoot, entityClient)
 							}
-						})),
-						m(".mr-negative-s.align-self-end", m(ButtonN, {
-							label: "addTemplate_label",
-							type: ButtonType.Primary,
-							click: () => {
-								showTemplateEditor(null, this._groupInstance.groupRoot)
-							},
-						})),
-					])
-					: null),
-			m(".rel.flex-grow", this._list ? m(this._list) : null)
-		])
+							reader.readAsBinaryString(this.files[0])
+						}
+					})),
+					m(".mr-negative-s.align-self-end", m(ButtonN, {
+						label: "addTemplate_label",
+						type: ButtonType.Primary,
+						click: () => {
+							showTemplateEditor(null, this._groupInstance.groupRoot)
+						},
+					})),
+				])
+				: null
+		}, m(".rel.flex-grow", this._list ? m(this._list) : null))
 	}
 
 	entityEventsReceived(updates: $ReadOnlyArray<EntityUpdateData>): Promise<void> {

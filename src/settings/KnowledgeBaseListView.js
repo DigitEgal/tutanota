@@ -20,6 +20,7 @@ import {hasCapabilityOnGroup} from "../sharing/GroupUtils"
 import {ShareCapability} from "../api/common/TutanotaConstants"
 import type {LoginController} from "../api/main/LoginController"
 import type {Group} from "../api/entities/sys/Group"
+import {ListColumnWrapper} from "../gui/ListColumnWrapper"
 
 assertMainOrNode()
 
@@ -93,9 +94,8 @@ export class KnowledgeBaseListView implements UpdatableSettingsViewer {
 	}
 
 	view(): Children {
-		return m(".flex.flex-column.fill-absolute", [
-			m(".flex.flex-column.justify-center.plr-l.list-border-right.list-bg.list-header",
-				this.userCanEdit()
+		return m(ListColumnWrapper, {
+				headerContent: this.userCanEdit()
 					? m(".mr-negative-s.align-self-end", m(ButtonN, {
 						label: "addEntry_label",
 						type: ButtonType.Primary,
@@ -104,9 +104,9 @@ export class KnowledgeBaseListView implements UpdatableSettingsViewer {
 						}
 					}))
 					: null
-			),
+			},
 			m(".rel.flex-grow", this._list ? m(this._list) : null)
-		])
+		)
 	}
 
 	entityEventsReceived(updates: $ReadOnlyArray<EntityUpdateData>): Promise<void> {
