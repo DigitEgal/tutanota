@@ -22,6 +22,7 @@ import {UserGroupRootTypeRef} from "../api/entities/sys/UserGroupRoot"
 import {NotFoundError} from "../api/common/error/RestError"
 import type {IUserController} from "../api/main/UserController"
 import type {Customer} from "../api/entities/sys/Customer"
+import type {TemplateGroupInstance} from "../templates/model/TemplateGroupModel"
 
 /**
  * Whether or not a user has a given capability for a shared group. If the group type is not shareable, this will always return false

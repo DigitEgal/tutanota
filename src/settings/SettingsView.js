@@ -13,7 +13,6 @@ import {MailSettingsViewer} from "./MailSettingsViewer"
 import {UserListView} from "./UserListView"
 import type {User} from "../api/entities/sys/User"
 import {UserTypeRef} from "../api/entities/sys/User"
-import {Button} from "../gui/base/Button"
 import {ButtonColors} from "../gui/base/ButtonN"
 import {logins} from "../api/main/LoginController"
 import {GroupListView} from "./GroupListView"
@@ -168,7 +167,6 @@ export class SettingsView implements CurrentView {
 				this._templateInvitations.dispose()
 			},
 			view: () => {
-				const hasTemplateInvitations = this._templateInvitations.invitations().length > 0
 				const [ownTemplates, sharedTemplates] = partition(this._templateFolders,
 					folder => isSharedGroupOwner(folder.data.userGroup, getEtId(logins.getUserController().user)))
 				return m(FolderColumnView, {
@@ -176,23 +174,24 @@ export class SettingsView implements CurrentView {
 					content: m(".flex.flex-grow.col", [
 						m(SidebarSection, {
 							label: "userSettings_label",
-						}, this._createSidebarSectionChildren(this._userFolders)),
+						}, this._renderSidebarSectionChildren(this._userFolders)),
 						logins.isUserLoggedIn() && logins.getUserController().isGlobalOrLocalAdmin()
 							? m(SidebarSection, {
 								label: "adminSettings_label",
-							}, this._createSidebarSectionChildren(this._adminFolders))
+							}, this._renderSidebarSectionChildren(this._adminFolders))
 							: null,
 						m(SidebarSection, {label: "template_label"}, [
 							ownTemplates.length > 0
-								? ownTemplates.map(folder => this._createTemplateFolderRow(folder))
+								? ownTemplates.map(folder => this._renderTemplateFolderRow(folder))
 								: m(SettingsFolderRow, {mainButtonAttrs: this._createSettingsFolderNavButton(this._dummyTemplateFolder)}),
+							sharedTemplates.map(folder => this._renderTemplateFolderRow(folder)),
 							this._templateInvitations.invitations()
 							    .map(invitation => this._renderTemplateInvitationFolderRow(invitation))
 						]),
 						this._knowledgeBaseFolders.length > 0
 							? m(SidebarSection, {
 								label: "knowledgebase_label",
-							}, this._createSidebarSectionChildren(this._knowledgeBaseFolders))
+							}, this._renderSidebarSectionChildren(this._knowledgeBaseFolders))
 							: null,
 						isTutanotaDomain() ? this._aboutThisSoftwareLink() : null,
 					]),
@@ -238,9 +237,9 @@ export class SettingsView implements CurrentView {
 		}
 	}
 
-	_createTemplateFolderRow(folder: SettingsFolder<TemplateGroupInstance>): Children {
-		const isGroupOwner = isSharedGroupOwner(folder.data.userGroup, getEtId(logins.getUserController().user))
-
+	_renderTemplateFolderRow(folder: SettingsFolder<TemplateGroupInstance>): Children {
+		const instance = folder.data
+		const isGroupOwner = isSharedGroupOwner(instance.userGroup, getEtId(logins.getUserController().user))
 		return m(SettingsFolderRow, {
 			mainButtonAttrs: this._createSettingsFolderNavButton(folder),
 			extraButtonAttrs: moreButton([
@@ -258,15 +257,17 @@ export class SettingsView implements CurrentView {
 					label: "sharing_label",
 					click: () => showGroupSharingDialog(folder.data.groupInfo, true),
 					icon: () => Icons.ContactImport
-				}
-			])
+				},
+
+			]),
+			smallText: !isGroupOwner ? lang.get("shared_label") : null
 		})
 	}
 
 	_renderTemplateInvitationFolderRow(invitation: ReceivedGroupInvitation): Children {
 		return m(SettingsFolderRow, {
 			mainButtonAttrs: {
-				label: () => invitation.inviterName,
+				label: () => invitation.sharedGroupName,
 				icon: () => Icons.ListAlt,
 				href: "invitation",
 				colors: ButtonColors.Nav,
@@ -278,11 +279,11 @@ export class SettingsView implements CurrentView {
 				click: () => showGroupInvitationDialog(invitation),
 				icon: () => BootIcons.Mail
 			},
-			smallText: getDisplayText(invitation.inviterName, invitation.inviterMailAddress, true)
+			smallText: lang.get("invitation_label")
 		})
 	}
 
-	_createSidebarSectionChildren(folders: SettingsFolder<void>[]): Children {
+	_renderSidebarSectionChildren(folders: SettingsFolder<void>[]): Children {
 
 		return m("",
 			folders

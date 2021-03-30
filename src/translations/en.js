@@ -1384,7 +1384,7 @@ export default {
 		"businessFeatureRequiredTemplates_msg": "If you want to use templates, you'll have to order the business feature.",
 		"newTemplateList_msg": "New template list",
 		"templateGroupDefaultName_label": "My Templates",
-		"sharedTemplates_label": "Shared templates"
+		"shared_label": "Shared with you"
 
 	}
 }

@@ -1373,4 +1373,4 @@ export type TranslationKeyType = "about_label"
 
 	| "businessFeatureRequiredTemplates_msg"
 	| "templateGroupDefaultName_label"
-	| "sharedTemplates_label"
+	| "shared_label"
