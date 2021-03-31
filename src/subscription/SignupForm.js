@@ -12,9 +12,11 @@ import {isApp, isTutanotaDomain} from "../api/common/Env"
 import {AccountType, TUTANOTA_MAIL_ADDRESS_DOMAINS} from "../api/common/TutanotaConstants"
 import {PasswordForm} from "../settings/PasswordForm"
 import type {CheckboxAttrs} from "../gui/base/CheckboxN"
+import {CheckboxN} from "../gui/base/CheckboxN"
 import {neverNull} from "../api/common/utils/Utils"
 import {lang} from "../misc/LanguageViewModel"
 import type {DialogHeaderBarAttrs} from "../gui/base/DialogHeaderBar"
+import {DialogHeaderBar} from "../gui/base/DialogHeaderBar"
 import {showWorkerProgressDialog} from "../gui/ProgressDialog"
 import {worker} from "../api/main/WorkerClient"
 import {AccessDeactivatedError, AccessExpiredError, InvalidDataError} from "../api/common/error/RestError"
@@ -27,9 +29,8 @@ import {HttpMethod} from "../api/common/EntityFunctions"
 import {RegistrationCaptchaServiceReturnTypeRef} from "../api/entities/sys/RegistrationCaptchaServiceReturn"
 import {createRegistrationCaptchaServiceData} from "../api/entities/sys/RegistrationCaptchaServiceData"
 import {TextField} from "../gui/base/TextField"
-import {DialogHeaderBar} from "../gui/base/DialogHeaderBar"
 import {uint8ArrayToBase64} from "../api/common/utils/Encoding"
-import {CheckboxN} from "../gui/base/CheckboxN"
+import type {TranslationKey} from "../misc/LanguageViewModel"
 
 export type SignupFormAttrs = {
 	/** Handle a new account signup. if readonly then the argument will always be null */
@@ -43,24 +44,38 @@ export type SignupFormAttrs = {
 }
 
 export class SignupForm implements MComponent<SignupFormAttrs> {
-	_mailAddressForm: SelectMailAddressForm
 	_passwordForm: PasswordForm
 	_confirmTerms: Stream<boolean>
 	_confirmAge: Stream<boolean>
 	_code: Stream<string>
+	_mailAddressFormErrorId: ?TranslationKey
+	_mailAddress: string
+	_isMailVerificationBusy: boolean
 
 	constructor() {
-		this._mailAddressForm = new SelectMailAddressForm(
-			isTutanotaDomain() ? TUTANOTA_MAIL_ADDRESS_DOMAINS : getWhitelabelRegistrationDomains())
 		this._passwordForm = new PasswordForm(
 			false, true, true, "passwordImportance_msg")
 		this._confirmTerms = stream(false)
 		this._confirmAge = stream(false)
 		this._code = stream("")
+		this._isMailVerificationBusy = false
 	}
 
 	view(vnode: Vnode<SignupFormAttrs>): Children {
 		const a = vnode.attrs
+
+		const mailAddressFormAttrs = {
+			availableDomains: isTutanotaDomain() ? TUTANOTA_MAIL_ADDRESS_DOMAINS : getWhitelabelRegistrationDomains(),
+			onEmailChanged: (email, validationResult) => {
+				if (validationResult.isValid) {
+					this._mailAddress = email
+					this._mailAddressFormErrorId = null
+				} else {
+					this._mailAddressFormErrorId = validationResult.errorId
+				}
+			},
+			onBusyStateChanged: (isBusy) => {this._isMailVerificationBusy = isBusy},
+		}
 
 		const confirmTermsCheckBoxAttrs: CheckboxAttrs = {
 			label: renderTermsLabel,
@@ -73,10 +88,12 @@ export class SignupForm implements MComponent<SignupFormAttrs> {
 
 
 		const submit = () => {
+			if (this._isMailVerificationBusy) return
+
 			if (a.readonly) {
 				return a.newSignupHandler(null)
 			}
-			const errorMessage = this._mailAddressForm.getErrorMessageId() || this._passwordForm.getErrorMessageId()
+			const errorMessage = this._mailAddressFormErrorId || this._passwordForm.getErrorMessageId()
 				|| (!this._confirmTerms() ? "termsAcceptedNeutral_msg" : null)
 
 			if (errorMessage) {
@@ -91,7 +108,7 @@ export class SignupForm implements MComponent<SignupFormAttrs> {
 			ageConfirmPromise.then(confirmed => {
 				if (confirmed) {
 					return signup(
-						this._mailAddressForm.getCleanMailAddress(),
+						this._mailAddress,
 						this._passwordForm.getNewPassword(),
 						this._code(),
 						a.isBusinessUse(),
@@ -112,7 +129,7 @@ export class SignupForm implements MComponent<SignupFormAttrs> {
 					disabled: true
 				})
 				: [
-					m(this._mailAddressForm),
+					m(SelectMailAddressForm, mailAddressFormAttrs),
 					m(this._passwordForm),
 					(getWhitelabelRegistrationDomains().length > 0) ? m(TextFieldN, {
 						value: this._code,
