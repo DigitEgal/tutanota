@@ -28,7 +28,6 @@ import {SysService} from "../api/entities/sys/Services"
 import {HttpMethod} from "../api/common/EntityFunctions"
 import {RegistrationCaptchaServiceReturnTypeRef} from "../api/entities/sys/RegistrationCaptchaServiceReturn"
 import {createRegistrationCaptchaServiceData} from "../api/entities/sys/RegistrationCaptchaServiceData"
-import {TextField} from "../gui/base/TextField"
 import {uint8ArrayToBase64} from "../api/common/utils/Encoding"
 import type {TranslationKey} from "../misc/LanguageViewModel"
 
@@ -213,6 +212,7 @@ export function parseCaptchaInput(captchaInput: string): ?string {
  *  * Refactor token usage
  */
 function runCaptcha(mailAddress: string, isBusinessUse: boolean, isPaidSubscription: boolean, campaignToken: ?string): Promise<?string> {
+	let captchaInput = ""
 	let data = createRegistrationCaptchaServiceGetData()
 	data.token = campaignToken
 	data.mailAddress = mailAddress
@@ -230,7 +230,7 @@ function runCaptcha(mailAddress: string, isBusinessUse: boolean, isPaidSubscript
 						callback(null)
 					}
 					const okAction = () => {
-						let parsedInput = parseCaptchaInput(captchaInput.value())
+						let parsedInput = parseCaptchaInput(captchaInput)
 						if (parsedInput) {
 							let data = createRegistrationCaptchaServiceData()
 							data.token = captchaReturn.token
@@ -264,8 +264,13 @@ function runCaptcha(mailAddress: string, isBusinessUse: boolean, isPaidSubscript
 						right: [{label: "ok_action", click: okAction, type: ButtonType.Primary}],
 						middle: () => lang.get("captchaDisplay_label")
 					}
-					let captchaInput = new TextField(() => lang.get("captchaInput_label")
-						+ ' (hh:mm)', () => lang.get("captchaInfo_msg"))
+					const captchaInputAttrs = {
+						label: lang.get("captchaInput_label") + ' (hh:mm)',
+						helpLabel: () => lang.get("captchaInfo_msg"),
+						value: stream(captchaInput),
+						oninput: (value) => captchaInput = value,
+					}
+
 					dialog = new Dialog(DialogType.EditSmall, {
 						view: (): Children => [
 							m(".dialog-header.plr-l", m(DialogHeaderBar, actionBarAttrs)),
@@ -274,7 +279,7 @@ function runCaptcha(mailAddress: string, isBusinessUse: boolean, isPaidSubscript
 									src: "data:image/png;base64," + uint8ArrayToBase64(neverNull(captchaReturn.challenge)),
 									alt: lang.get("captchaDisplay_label")
 								}),
-								m(captchaInput)
+								m(TextFieldN, captchaInputAttrs)
 							])
 						]
 					}).setCloseHandler(cancelAction).show()
