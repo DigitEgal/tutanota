@@ -14,12 +14,18 @@ import {ButtonN, ButtonType} from "../../gui/base/ButtonN"
 import type {ReceivedGroupInvitation} from "../../api/entities/sys/ReceivedGroupInvitation"
 import {isSameId} from "../../api/common/utils/EntityUtils"
 import {sendAcceptNotificationEmail, sendRejectNotificationEmail} from "../GroupSharingUtils"
-import {getCapabilityText, getInvitationGroupType, groupRequiresBusinessFeature, isUsingBusinessFeatureAllowed} from "../GroupUtils"
+import {
+	getCapabilityText,
+	getDefaultGroupName,
+	getInvitationGroupType,
+	groupRequiresBusinessFeature,
+	isUsingBusinessFeatureAllowed
+} from "../GroupUtils"
 import {showBusinessFeatureRequiredDialog} from "../../misc/SubscriptionDialogs"
+import type {GroupSharingTexts} from "../GroupGuiUtils"
 import {getTextsForGroupType} from "../GroupGuiUtils"
 import {GroupType} from "../../api/common/TutanotaConstants"
 import {ColorPicker} from "../../gui/base/ColorPicker"
-import type {GroupSharingTexts} from "../GroupGuiUtils"
 
 
 export function showGroupInvitationDialog(invitation: ReceivedGroupInvitation) {
@@ -34,6 +40,9 @@ export function showGroupInvitationDialog(invitation: ReceivedGroupInvitation) {
 
 	const colorStream = stream("#" + color)
 
+	const isDefaultGroupName = invitation.sharedGroupName === getDefaultGroupName(downcast(invitation.groupType))
+
+	const nameStream = stream(isDefaultGroupName ? texts.sharedGroupDefaultCustomName(invitation.inviterName) : invitation.sharedGroupName)
 	const isMember = !!logins.getUserController().getCalendarMemberships().find((ms) => isSameId(ms.group, invitation.sharedGroup))
 	let dialog
 
@@ -42,19 +51,20 @@ export function showGroupInvitationDialog(invitation: ReceivedGroupInvitation) {
 			if (canAccept) {
 				acceptInvite(invitation, texts).then(() => {
 					dialog.close()
-					if (groupType === GroupType.Calendar) {
-						const newColor = colorStream().substring(1) // color is stored without #
-						if (existingGroupSettings) {
-							existingGroupSettings.color = newColor
-						} else {
-							const groupSettings = Object.assign(createGroupSettings(), {
-								group: invitation.sharedGroup,
-								color: newColor
-							})
-							userSettingsGroupRoot.groupSettings.push(groupSettings)
-						}
-						update(userSettingsGroupRoot)
+					const newColor = colorStream().substring(1) // color is stored without #
+					const newName = nameStream()
+					if (existingGroupSettings) {
+						existingGroupSettings.color = newColor
+						existingGroupSettings.name = newName
+					} else {
+						const groupSettings = Object.assign(createGroupSettings(), {
+							group: invitation.sharedGroup,
+							color: newColor,
+							name: newName
+						})
+						userSettingsGroupRoot.groupSettings.push(groupSettings)
 					}
+					update(userSettingsGroupRoot)
 				})
 			}
 		})
@@ -69,9 +79,8 @@ export function showGroupInvitationDialog(invitation: ReceivedGroupInvitation) {
 						? lang.getMaybeLazy(texts.alreadyGroupMemberMessage)
 						: texts.receivedGroupInvitationMessage),
 					m(TextFieldN, {
-						value: stream(invitation.sharedGroupName),
+						value: nameStream,
 						label: texts.groupNameLabel,
-						disabled: true
 					}),
 					m(TextFieldN, {
 						value: stream(getDisplayText(invitation.inviterName, invitation.inviterMailAddress, false)),

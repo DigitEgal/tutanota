@@ -214,7 +214,7 @@ export class TemplatePopupModel {
 	getSelectedTemplateGroupInstance(): ?TemplateGroupInstance {
 		const selected = this.getSelectedTemplate()
 		return selected
-			? this._groupInstances.find(instance => isSameId(getEtId(instance.userGroup), selected._ownerGroup))
+			? this._groupInstances.find(instance => isSameId(getEtId(instance.group), selected._ownerGroup))
 			: null
 	}
 }
@@ -229,10 +229,10 @@ export function loadTemplateGroupInstance(groupMembership: GroupMembership, enti
 		                   entityClient.load(TemplateGroupRootTypeRef, groupInfo.group)
 		                               .then(groupRoot =>
 			                               entityClient.load(GroupTypeRef, groupInfo.group)
-			                                           .then(userGroup => {
+			                                           .then(group => {
 				                                           return {
 					                                           groupInfo,
-					                                           userGroup,
+					                                           group,
 					                                           groupRoot,
 					                                           groupMembership
 				                                           }

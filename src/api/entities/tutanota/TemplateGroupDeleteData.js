@@ -9,13 +9,13 @@ export const _TypeModel: TypeModel = {
 	"name": "TemplateGroupDeleteData",
 	"since": 45,
 	"type": "DATA_TRANSFER_TYPE",
-	"id": 1197,
-	"rootId": "CHR1dGFub3RhAASt",
+	"id": 1196,
+	"rootId": "CHR1dGFub3RhAASs",
 	"versioned": false,
 	"encrypted": false,
 	"values": {
 		"_format": {
-			"id": 1198,
+			"id": 1197,
 			"type": "Number",
 			"cardinality": "One",
 			"final": false,
@@ -24,7 +24,7 @@ export const _TypeModel: TypeModel = {
 	},
 	"associations": {
 		"group": {
-			"id": 1199,
+			"id": 1198,
 			"type": "ELEMENT_ASSOCIATION",
 			"cardinality": "One",
 			"final": false,

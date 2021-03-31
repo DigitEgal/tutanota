@@ -18,8 +18,8 @@ import {loadTemplateGroupInstances} from "./TemplatePopupModel"
 import {locator} from "../../api/main/MainLocator"
 
 export type TemplateGroupInstance = {
+	group: Group,
 	groupInfo: GroupInfo,
-	userGroup: Group,
 	groupRoot: TemplateGroupRoot,
 	groupMembership: GroupMembership
 }

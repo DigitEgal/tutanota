@@ -136,7 +136,7 @@ export class TemplateListView implements UpdatableSettingsViewer {
 	}
 
 	userCanEdit(): boolean {
-		return hasCapabilityOnGroup(this._logins.getUserController().user, this._groupInstance.userGroup, ShareCapability.Write)
+		return hasCapabilityOnGroup(this._logins.getUserController().user, this._groupInstance.group, ShareCapability.Write)
 	}
 }
 

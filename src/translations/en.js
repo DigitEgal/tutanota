@@ -1356,7 +1356,7 @@ export default {
 		"openKnowledgebase_action": "Open Knowledgebase",
 		"tooManyCustomDomains_msg": "Too many custom domains. Only one domain is allowed when deactivating the business feature.",
 		"featureRequiredForBusinessUse_msg": "This feature is required for business use.",
-		"deleteTemplateGroups_msg": "Please remove all template lists before deactivating the business feature.",
+		"deleteTemplateGroups_msg": "There are still template lists active which will need to be deleted before you can cancel the business feature. This may include shared template lists or template lists belonging to your users",
 		"openTemplatePopup_msg": "Open templates popup",
 		"createTemplateGroup_msg": "Create a new template list.",
 		"groupCapabilityInvite_label": "Write and manage sharing",
@@ -1384,7 +1384,9 @@ export default {
 		"businessFeatureRequiredTemplates_msg": "If you want to use templates, you'll have to order the business feature.",
 		"newTemplateList_msg": "New template list",
 		"templateGroupDefaultName_label": "My Templates",
-		"shared_label": "Shared with you"
+		"shared_label": "Shared with you",
+		"sharedTemplateGroupDefaultName_label": "{ownerName}'s Templates",
+		"renameTemplateList_label": "Rename template list"
 
 	}
 }

@@ -168,19 +168,19 @@ export class CalendarView implements CurrentView {
 						},
 					content: [
 						this._renderCalendarViewButtons(),
-						m(SidebarSection, {
-							label: "yourCalendars_label",
+						m(".folders", m(SidebarSection, {
+							name: "yourCalendars_label",
 							buttonAttrs: {
 								label: "addCalendar_action",
 								colors: ButtonColors.Nav,
 								click: () => this._onPressedAddCalendar(),
 								icon: () => Icons.Add
 							}
-						}, this._renderCalendars(false)),
-						m(SidebarSection, {label: "otherCalendars_label"}, this._renderCalendars(true)),
+						}, this._renderCalendars(false))),
+						m(SidebarSection, {name: "otherCalendars_label"}, this._renderCalendars(true)),
 						this._calendarInvitations.invitations().length > 0
 							? m(SidebarSection, {
-								label: "calendarInvitations_label"
+								name: "calendarInvitations_label"
 							}, this._calendarInvitations.invitations().map((invitation) => m(GroupInvitationFolderRow, {invitation})))
 							: null,
 					],

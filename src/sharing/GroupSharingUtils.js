@@ -56,4 +56,3 @@ function _sendNotificationEmail(recipients: Recipients, subject: string, body: s
 	})
 
 }
-

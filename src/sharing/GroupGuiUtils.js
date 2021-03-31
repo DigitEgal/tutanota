@@ -6,6 +6,7 @@ import {lang} from "../misc/LanguageViewModel"
 import type {GroupTypeEnum} from "../api/common/TutanotaConstants"
 import {GroupType} from "../api/common/TutanotaConstants"
 import {ProgrammingError} from "../api/common/error/ProgrammingError"
+import {getDefaultGroupName} from "./GroupUtils"
 
 export type GroupSharingTexts = {
 	+groupNameLabel: TranslationKey,
@@ -24,6 +25,8 @@ export type GroupSharingTexts = {
 
 	+alreadyGroupMemberMessage: TranslationText,
 	+receivedGroupInvitationMessage: string,
+	+sharedGroupDefaultCustomName: (groupOwnerName: string) => string
+
 }
 
 const CALENDAR_SHARING_TEXTS: lazy<GroupSharingTexts> = () => ({
@@ -55,7 +58,8 @@ const CALENDAR_SHARING_TEXTS: lazy<GroupSharingTexts> = () => ({
 	sharingNotOrderedAdmin: lang.get("sharingFeatureNotOrderedAdmin_msg"),
 	sharingNotOrderedUser: lang.get("sharingFeatureNotOrderedUser_msg"),
 	alreadyGroupMemberMessage: "alreadyMember_msg",
-	receivedGroupInvitationMessage: `${lang.get("shareCalendarWarning_msg")} ${lang.get("shareCalendarWarningAliases_msg")}`
+	receivedGroupInvitationMessage: `${lang.get("shareCalendarWarning_msg")} ${lang.get("shareCalendarWarningAliases_msg")}`,
+	sharedGroupDefaultCustomName: groupOwnerName => getDefaultGroupName(GroupType.Calendar)
 })
 
 const TEMPLATE_SHARING_TEXTS: lazy<GroupSharingTexts> = () => ({
@@ -86,7 +90,8 @@ const TEMPLATE_SHARING_TEXTS: lazy<GroupSharingTexts> = () => ({
 	sharingNotOrderedUser: lang.get("templateSharingNotOrdered_msg"),
 	sharingNotOrderedAdmin: lang.get("templateSharingNotOrdered_msg"),
 	alreadyGroupMemberMessage: "alreadyTemplateGroupMember_msg",
-	receivedGroupInvitationMessage: `${lang.get("shareTemplateGroupWarning_msg")} ${lang.get("shareCalendarWarningAliases_msg")}`
+	receivedGroupInvitationMessage: `${lang.get("shareTemplateGroupWarning_msg")} ${lang.get("shareCalendarWarningAliases_msg")}`,
+	sharedGroupDefaultCustomName: ownerName => lang.get("sharedTemplateGroupDefaultName_label", {"{ownerName}": ownerName})
 })
 
 export function getTextsForGroupType(groupType: GroupTypeEnum): GroupSharingTexts {

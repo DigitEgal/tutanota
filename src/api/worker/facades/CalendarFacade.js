@@ -193,7 +193,7 @@ export class CalendarFacade {
 		return this._entity.load(GroupTypeRef, this._loginFacade.getUserGroupId()).then(userGroup => {
 			const adminGroupId = neverNull(userGroup.admin) // user group has always admin group
 			let adminGroupKey = null
-			if (this._loginFacade.getAllGroupIds().indexOf(adminGroupId) !== -1) { // getGroupKey throws an if user is not member of that group - so check first
+			if (this._loginFacade.getAllGroupIds().indexOf(adminGroupId) !== -1) { // getGroupKey throws an error if user is not member of that group - so check first
 				adminGroupKey = this._loginFacade.getGroupKey(adminGroupId)
 			}
 			const customerGroupKey = this._loginFacade.getGroupKey(this._loginFacade.getGroupId(GroupType.Customer))

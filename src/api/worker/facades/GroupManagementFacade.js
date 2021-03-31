@@ -84,28 +84,24 @@ export class GroupManagementFacade {
 
 	// TODO Maybe consolidate with UserManagementFacade.generateCalendarGroupData and other possible similar methods
 	createTemplateGroup(name: string): Promise<Id> {
-		const adminGroupId = this._login.getGroupId(GroupType.Admin)
-		const adminGroupKey = this._login.getAllGroupIds().indexOf(adminGroupId) !== -1
-			? this._login.getGroupKey(adminGroupId)
-			: null
-		const customerGroupKey = this._login.getGroupKey(this._login.getGroupId(GroupType.Customer))
-		const userGroupKey = this._login.getUserGroupKey()
+		return this._login.getGroupIdOfAdminOfUser().then(adminGroupId => {
+			const customerGroupKey = this._login.getGroupKey(this._login.getGroupId(GroupType.Customer))
+			const userGroupKey = this._login.getUserGroupKey()
+			const templateGroupRootSessionKey = aes128RandomKey()
+			const templateGroupInfoSessionKey = aes128RandomKey()
+			const templateGroupKey = aes128RandomKey()
 
-		const templateGroupRootSessionKey = aes128RandomKey()
-		const templateGroupInfoSessionKey = aes128RandomKey()
-		const templateGroupKey = aes128RandomKey()
+			const serviceData = createTemplateGroupPostData({
+				groupEncGroupRootSessionKey: encryptKey(templateGroupKey, templateGroupRootSessionKey),
+				groupInfoEncName: encryptString(templateGroupInfoSessionKey, name),
+				ownerEncGroupInfoSessionKey: encryptKey(customerGroupKey, templateGroupInfoSessionKey),
+				userEncGroupKey: encryptKey(userGroupKey, templateGroupKey),
+				adminGroup: adminGroupId
+			})
 
-		const serviceData = createTemplateGroupPostData({
-			adminEncGroupKey: adminGroupKey ? encryptKey(adminGroupKey, templateGroupKey) : null,
-			groupEncGroupRootSessionKey: encryptKey(templateGroupKey, templateGroupRootSessionKey),
-			groupInfoEncName: encryptString(templateGroupInfoSessionKey, name),
-			ownerEncGroupInfoSessionKey: encryptKey(customerGroupKey, templateGroupInfoSessionKey),
-			userEncGroupKey: encryptKey(userGroupKey, templateGroupKey),
-			adminGroup: adminGroupId
+			return serviceRequest(TutanotaService.TemplateGroupService, HttpMethod.POST, serviceData, CreateGroupPostReturnTypeRef)
+				.then(returnValue => returnValue.group)
 		})
-
-		return serviceRequest(TutanotaService.TemplateGroupService, HttpMethod.POST, serviceData, CreateGroupPostReturnTypeRef)
-			.then(returnValue => returnValue.group)
 	}
 
 	generateInternalGroupData(keyPair: RsaKeyPair, groupKey: Aes128Key, groupInfoSessionKey: Aes128Key, adminGroupId: ?Id, adminGroupKey: Aes128Key, ownerGroupKey: Aes128Key): InternalGroupData {

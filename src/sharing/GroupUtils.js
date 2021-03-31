@@ -5,8 +5,7 @@ import type {Group} from "../api/entities/sys/Group"
 import type {GroupTypeEnum, ShareCapabilityEnum} from "../api/common/TutanotaConstants"
 import {FeatureType, GroupType, groupTypeToString, ShareCapability} from "../api/common/TutanotaConstants"
 import type {GroupMembership} from "../api/entities/sys/GroupMembership"
-import {isSameId} from "../api/common/utils/EntityUtils"
-import type {TranslationKey} from "../misc/LanguageViewModel"
+import {getEtId, isSameId} from "../api/common/utils/EntityUtils"
 import {lang} from "../misc/LanguageViewModel"
 import type {GroupInfo} from "../api/entities/sys/GroupInfo"
 import {GroupInfoTypeRef} from "../api/entities/sys/GroupInfo"
@@ -22,7 +21,6 @@ import {UserGroupRootTypeRef} from "../api/entities/sys/UserGroupRoot"
 import {NotFoundError} from "../api/common/error/RestError"
 import type {IUserController} from "../api/main/UserController"
 import type {Customer} from "../api/entities/sys/Customer"
-import type {TemplateGroupInstance} from "../templates/model/TemplateGroupModel"
 
 /**
  * Whether or not a user has a given capability for a shared group. If the group type is not shareable, this will always return false
@@ -46,8 +44,8 @@ export function hasCapabilityOnGroup(user: User, group: Group, requiredCapabilit
 	return false
 }
 
-export function isSharedGroupOwner(sharedGroup: Group, userId: Id): boolean {
-	return !!(sharedGroup.user && isSameId(sharedGroup.user, userId))
+export function isSharedGroupOwner(sharedGroup: Group, user: Id | User): boolean {
+	return !!(sharedGroup.user && isSameId(sharedGroup.user, typeof user === "string" ? user : getEtId(user)))
 }
 
 export function getCapabilityText(capability: ?ShareCapabilityEnum): string {

@@ -245,7 +245,7 @@ export class TemplatePopup implements ModalComponent {
 	_createAddButtonAttributes(): ?ButtonAttrs {
 		const templateGroupInstances = this._templateModel.getTemplateGroupInstances()
 		const writeableGroups = templateGroupInstances.filter(instance =>
-			hasCapabilityOnGroup(logins.getUserController().user, instance.userGroup, ShareCapability.Write))
+			hasCapabilityOnGroup(logins.getUserController().user, instance.group, ShareCapability.Write))
 
 		if (templateGroupInstances.length === 0) {
 			return {
@@ -302,7 +302,7 @@ export class TemplatePopup implements ModalComponent {
 		const selectedGroup = this._templateModel.getSelectedTemplateGroupInstance()
 
 		const canEdit = !!selectedGroup
-			&& hasCapabilityOnGroup(logins.getUserController().user, selectedGroup.userGroup, ShareCapability.Write)
+			&& hasCapabilityOnGroup(logins.getUserController().user, selectedGroup.group, ShareCapability.Write)
 
 		return [
 			m(ButtonN, attachDropdown({

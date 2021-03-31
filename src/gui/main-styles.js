@@ -139,7 +139,9 @@ styles.registerStyle('main', () => {
 		'.smaller': {
 			'font-size': px(size.font_size_smaller),
 		},
-
+		'.relatively-smaller': {
+			'font-size': "0.6rem"
+		},
 		'.b': {
 			'font-weight': 'bold',
 		},

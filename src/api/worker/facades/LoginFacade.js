@@ -87,6 +87,7 @@ import {createWebsocketLeaderStatus} from "../../entities/sys/WebsocketLeaderSta
 import {createEntropyData} from "../../entities/tutanota/EntropyData"
 import {GENERATED_ID_BYTES_LENGTH, isSameId} from "../../common/utils/EntityUtils";
 import {isSameTypeRefByAttr} from "../../common/utils/TypeRef";
+import {GroupTypeRef} from "../../entities/sys/Group"
 
 assertWorkerOrNode()
 
@@ -382,6 +383,17 @@ export class LoginFacade {
 				this.reset()
 				throw e
 			})
+	}
+
+	/**
+	 * Get the id of the admin of the current user
+	 * either a local or a global admin
+	 */
+	getGroupIdOfAdminOfUser(): Promise<Id> {
+		return this._entity.load(GroupTypeRef, this.getUserGroupId()).then(userGroup => {
+			// user group has always admin group
+			return neverNull(userGroup.admin)
+		})
 	}
 
 	_initIndexer(): Promise<void> {
