@@ -17,6 +17,7 @@ import {ALLOWED_IMAGE_FORMATS, ConversationType, Keys, MailMethod} from "../../a
 import {FileNotFoundError} from "../../api/common/error/FileNotFoundError"
 import {PreconditionFailedError} from "../../api/common/error/RestError"
 import type {DialogHeaderBarAttrs} from "../../gui/base/DialogHeaderBar"
+import type {ButtonAttrs} from "../../gui/base/ButtonN"
 import {ButtonN, ButtonType} from "../../gui/base/ButtonN"
 import {attachDropdown, createDropdown} from "../../gui/base/DropdownN"
 import {fileController} from "../../file/FileController"
@@ -51,12 +52,12 @@ import {showUserError} from "../../misc/ErrorHandlerImpl"
 import {createInlineImage, replaceCidsWithInlineImages, replaceInlineImagesWithCids} from "../view/MailGuiUtils";
 import {client} from "../../misc/ClientDetector"
 import {appendEmailSignature} from "../signature/Signature"
-import type {ButtonAttrs} from "../../gui/base/ButtonN"
 import {showTemplatePopupInEditor} from "../../templates/view/TemplatePopup"
 import {registerTemplateShortcutListener} from "../../templates/view/TemplateShortcutListener"
-import {createKnowledgeBaseModel, KnowledgeBaseModel} from "../../knowledgebase/model/KnowledgeBaseModel"
-import {showKnowledgeBaseDialog} from "../../knowledgebase/view/KnowledgeBaseDialog"
 import {TemplatePopupModel} from "../../templates/model/TemplatePopupModel"
+import {createKnowledgeBaseDialogInjection, createOpenKnowledgeBaseButtonAttrs} from "../../knowledgebase/view/KnowledgeBaseDialog"
+import {KnowledgeBaseModel} from "../../knowledgebase/model/KnowledgeBaseModel"
+import {styles} from "../../gui/styles"
 
 export type MailEditorAttrs = {
 	model: SendMailModel,
@@ -70,7 +71,7 @@ export type MailEditorAttrs = {
 	inlineImages?: Promise<InlineImages>,
 	dialog: lazy<Dialog>,
 	templateModel: ?TemplatePopupModel,
-	knowledgeBase: ?Promise<KnowledgeBaseModel>,
+	createKnowledgeBaseButtonAttrs: (editor: Editor) => ?ButtonAttrs,
 }
 
 export function createMailEditorAttrs(model: SendMailModel,
@@ -78,7 +79,7 @@ export function createMailEditorAttrs(model: SendMailModel,
                                       doFocusEditorOnLoad: boolean, inlineImages?: Promise<InlineImages>,
                                       dialog: lazy<Dialog>,
                                       templateModel: ?TemplatePopupModel,
-                                      knowledgeBase: ?Promise<KnowledgeBaseModel>,
+                                      createKnowledgeBaseButtonAttrs: (editor: Editor) => ?ButtonAttrs
 ): MailEditorAttrs {
 	return {
 		model,
@@ -90,7 +91,7 @@ export function createMailEditorAttrs(model: SendMailModel,
 		inlineImages: inlineImages,
 		dialog,
 		templateModel,
-		knowledgeBase,
+		createKnowledgeBaseButtonAttrs: createKnowledgeBaseButtonAttrs
 	}
 }
 
@@ -104,6 +105,7 @@ export class MailEditor implements MComponent<MailEditorAttrs> {
 	inlineImageElements: Array<HTMLElement>
 	areTemplatesInitialized: boolean
 	templateModel: ?TemplatePopupModel
+	openKnowledgeBaseButtonAttrs: ?ButtonAttrs
 
 	constructor(vnode: Vnode<MailEditorAttrs>) {
 
@@ -258,6 +260,11 @@ export class MailEditor implements MComponent<MailEditorAttrs> {
 		]
 
 		shortcuts.forEach(dialog.addShortcut.bind(dialog))
+
+		this.editor.initialized.promise.then(() => {
+			this.openKnowledgeBaseButtonAttrs = a.createKnowledgeBaseButtonAttrs(this.editor)
+			m.redraw()
+		})
 	}
 
 	view(vnode: Vnode<MailEditorAttrs>): Children {
@@ -294,20 +301,6 @@ export class MailEditor implements MComponent<MailEditorAttrs> {
 			: null
 
 
-		const knowledgebaseButtonAttrs = {
-			label: "openKnowledgebase_action",
-			click: () => {
-				if (this.templateModel && a.knowledgeBase) {
-					Promise.all([this.templateModel, a.knowledgeBase])
-					       .then(([templateModel, knowledgeBase]) => {
-						       knowledgeBase.sortEntriesByMatchingKeywords(this.editor.getValue())
-						       showKnowledgeBaseDialog(knowledgeBase, templateModel, this.editor)
-					       })
-				}
-			},
-			icon: () => Icons.ListOrdered,
-		}
-
 		const doShowKnowlegdeBaseButton = logins.getUserController().getTemplateMemberships().length > 0
 
 		const subjectFieldAttrs: TextFieldAttrs = {
@@ -319,7 +312,7 @@ export class MailEditor implements MComponent<MailEditorAttrs> {
 				return showConfidentialButton
 					? [m(ButtonN, confidentialButtonAttrs), m(ButtonN, attachFilesButtonAttrs), toolbarButton()]
 					: [
-						doShowKnowlegdeBaseButton ? m(ButtonN, knowledgebaseButtonAttrs) : null,
+						this.openKnowledgeBaseButtonAttrs ? m(ButtonN, this.openKnowledgeBaseButtonAttrs) : null,
 						m(ButtonN, attachFilesButtonAttrs),
 						toolbarButton()
 					]
@@ -534,19 +527,29 @@ function createMailEditorDialog(model: SendMailModel, blockExternalContent: bool
 	}
 
 
+	const templatePopupModel = logins.isInternalUserLoggedIn()
+		? new TemplatePopupModel(locator.eventController, logins, locator.entityClient)
+		: null
+
+
+	const createKnowledgebaseButtonAttrs = (editor: Editor) => {
+		// only create knowledgebase button for internal users with valid template group and enabled KnowledgebaseFeature
+		if (styles.isDesktopLayout() && templatePopupModel && logins.getUserController().getTemplateMemberships().length > 0) {
+			const knowledgebaseModel = new KnowledgeBaseModel(locator.eventController, locator.entityClient, logins.getUserController())
+			const knowledgebaseInjection = createKnowledgeBaseDialogInjection(knowledgebaseModel, templatePopupModel, editor)
+			const knowledgebaseButtonAttrs = createOpenKnowledgeBaseButtonAttrs(knowledgebaseInjection, () => editor.getValue())
+			dialog.setInjectionRight(knowledgebaseInjection)
+			return knowledgebaseButtonAttrs
+		}
+	}
+
 	mailEditorAttrs = createMailEditorAttrs(model,
 		blockExternalContent,
 		model.toRecipients().length !== 0,
 		inlineImages,
 		() => dialog,
-		logins.isInternalUserLoggedIn()
-			? new TemplatePopupModel(locator.eventController, logins, locator.entityClient)
-			: null,
-		// Dont make an empty template model or knowledge base model
-		// TODO createKnowledgeBaseModel should just take an instance of TemplatePopupModel
-		logins.getUserController().getTemplateMemberships().length > 0
-			? createKnowledgeBaseModel(locator.eventController, logins, locator.entityClient)
-			: null,
+		templatePopupModel,
+		createKnowledgebaseButtonAttrs
 	)
 
 	const shortcuts = [
@@ -555,7 +558,7 @@ function createMailEditorDialog(model: SendMailModel, blockExternalContent: bool
 		{key: Keys.S, ctrl: true, shift: true, exec: send, help: "send_action"},
 	]
 
-	dialog = Dialog.largeDialogN(headerBarAttrs, MailEditor, mailEditorAttrs)
+	dialog = Dialog.largeDialogN(headerBarAttrs, MailEditor, mailEditorAttrs,)
 	dialog.setCloseHandler(() => closeButtonAttrs.click(newMouseEvent(), domCloseButton))
 	for (let shortcut of shortcuts) {
 		dialog.addShortcut(shortcut)

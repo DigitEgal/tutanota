@@ -410,6 +410,7 @@ styles.registerStyle('main', () => {
 		'.col-reverse': {'flex-direction': "column-reverse"},
 		'.flex': {display: 'flex'},
 		'.flex-grow': {flex: "1"},
+		'.flex-hide': {flex: "0"},
 		'.flex-third': {flex: '1 0 0', 'min-width': "100px"}, // splits a flex layout into three same width columns
 		'.flex-third-middle': {flex: '2 1 0'}, // take up more space for the middle column
 		'.flex-half': {flex: '0 0 50%'}, // splits a flex layout into two same width columns
@@ -443,6 +444,7 @@ styles.registerStyle('main', () => {
 		'.child-grow > *': {flex: "1 1 auto"},
 		'.last-child-fixed > *:last-child': {flex: "1 0 100px"},
 		'.limit-width': {'max-width': '100%'},
+		'.flex-transition': {transition: 'flex 200ms linear'},
 
 		'.border-radius': {'border-radius': px(size.border_radius)},
 		'.editor-border': {

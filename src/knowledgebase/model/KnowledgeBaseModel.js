@@ -18,11 +18,8 @@ import {getElementId, isSameId} from "../../api/common/utils/EntityUtils"
 import type {TemplateGroupInstance} from "../../templates/model/TemplateGroupModel"
 import {promiseMap} from "../../api/common/utils/PromiseUtils"
 import {loadTemplateGroupInstance} from "../../templates/model/TemplatePopupModel"
-
-export type KnowledgeBaseEntryInstance = {
-	group: TemplateGroupInstance;
-	entry: KnowledgeBaseEntry;
-}
+import {LazyLoaded} from "../../api/common/utils/LazyLoaded"
+import type {IUserController} from "../../api/main/UserController"
 
 export const SELECT_NEXT_ENTRY = "next";
 
@@ -39,11 +36,14 @@ export class KnowledgeBaseModel {
 	+_eventController: EventController;
 	+_entityClient: EntityClient;
 	+_entityEventReceived: EntityEventsListener;
-	_entries: Array<KnowledgeBaseEntryInstance>
+	_groupInstances: Array<TemplateGroupInstance>
+	_initialized: LazyLoaded<KnowledgeBaseModel>
+	_userController: IUserController
 
-	constructor(eventController: EventController, entityClient: EntityClient, entries: Array<KnowledgeBaseEntryInstance>) {
+	constructor(eventController: EventController, entityClient: EntityClient, userController: IUserController) {
 		this._eventController = eventController
 		this._entityClient = entityClient
+		this._userController = userController
 		this._allEntries = []
 		this._allKeywords = []
 		this._matchedKeywordsInContent = []
@@ -54,18 +54,43 @@ export class KnowledgeBaseModel {
 			return this._entityUpdate(updates)
 		}
 		this._eventController.addEntityListener(this._entityEventReceived)
-		this._entries = entries
-		this.initAllKeywords()
+		this._groupInstances = []
+		this._allKeywords = []
 		this.filteredEntries(this._allEntries)
 		this.selectedEntry(this.containsResult() ? this.filteredEntries()[0] : null)
+		this._initialized = new LazyLoaded(() => {
+			console.log("initializing template model")
+			const templateMemberships = this._userController.getTemplateMemberships()
+			let newGroupInstances = []
+			return promiseMap(templateMemberships, membership => loadTemplateGroupInstance(membership, entityClient))
+				.then(groupInstances => {
+					newGroupInstances = groupInstances
+					return loadKnowledgebaseEntries(groupInstances, entityClient)
+				}).then(knowledgebaseEntries => {
+					this._allEntries = knowledgebaseEntries
+					this._groupInstances = newGroupInstances
+					this.initAllKeywords()
+					return this
+				})
+		})
+	}
+
+
+	init(): Promise<KnowledgeBaseModel> {
+		return this._initialized.getAsync()
+	}
+
+	isInitialized(): boolean {
+		return this._initialized.isLoaded()
 	}
 
 	getTemplateGroupInstances(): Array<TemplateGroupInstance> {
-		return this._entries.map(entry => entry.group)
+		return this._groupInstances
 	}
 
 	initAllKeywords() {
 		this._allKeywords = []
+		this._matchedKeywordsInContent = []
 		this._allEntries.forEach(entry => {
 			entry.keywords.forEach(keyword => {
 				this._allKeywords.push(keyword.keyword)
@@ -201,16 +226,7 @@ export class KnowledgeBaseModel {
 	}
 }
 
-export function createKnowledgeBaseModel(eventController: EventController, logins: LoginController, entityClient: EntityClient): Promise<KnowledgeBaseModel> {
-	const templateMemberships = logins.getUserController().getTemplateMemberships()
-	const groupInstances = promiseMap(templateMemberships, membership => loadTemplateGroupInstance(membership, entityClient))
-	const entryInstances: Promise<Array<KnowledgeBaseEntryInstance>> =
-		promiseMap(groupInstances, group => entityClient.loadAll(KnowledgeBaseEntryTypeRef, group.groupRoot.knowledgeBase)
-		                                                .then(entries => entries.map(entry => ({group, entry}))))
-			.then(entries => entries.flat())
-
-	return entryInstances.then(entries =>
-		new KnowledgeBaseModel(eventController, entityClient, entries)
-	)
-
+function loadKnowledgebaseEntries(templateGroups: Array<TemplateGroupInstance>, entityClient: EntityClient): Promise<Array<KnowledgeBaseEntry>> {
+	return promiseMap(templateGroups, group => entityClient.loadAll(KnowledgeBaseEntryTypeRef, group.groupRoot.knowledgeBase))
+		.then(groupedTemplates => groupedTemplates.flat())
 }

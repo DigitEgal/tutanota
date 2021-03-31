@@ -27,6 +27,9 @@ import {dialogAttrs} from "../AriaUtils"
 import {styles} from "../styles"
 import type {MaybeLazy} from "../../api/common/utils/Utils"
 import {getAsLazy, mapLazily} from "../../api/common/utils/Utils"
+import type {ModalComponent} from "./Modal"
+import {DialogInjectionRight} from "./DialogInjectionRight"
+import type {DialogInjectionRightAttrs} from "./DialogInjectionRight"
 
 assertMainOrNode()
 
@@ -56,8 +59,7 @@ type ActionDialogProps = {|
 	type?: DialogTypeEnum,
 |}
 
-
-export class Dialog {
+export class Dialog implements ModalComponent {
 	static _keyboardHeight: number = 0;
 	_domDialog: HTMLElement;
 	_shortcuts: Shortcut[];
@@ -67,6 +69,7 @@ export class Dialog {
 	_wasFocusOnLoadCalled: boolean
 	_closeHandler: ?() => mixed;
 	_focusedBeforeShown: ?HTMLElement
+	_injectionRightAttrs: ?DialogInjectionRightAttrs<*>
 
 	constructor(dialogType: DialogTypeEnum, childComponent: MComponent<any>) {
 		this.visible = false
@@ -105,40 +108,48 @@ export class Dialog {
 								? px(Dialog._keyboardHeight)
 								: dialogType === DialogType.EditLarge ? 0 : marginPx,
 						},
-					}, m(this._getDialogStyle(dialogType) + dialogAttrs("dialog-title", "dialog-message"), {
-						onclick: (e: MouseEvent) => e.stopPropagation(), // do not propagate clicks on the dialog as the Modal expects all propagated clicks to be clicks on the background
-						oncreate: vnode => {
-							this._domDialog = vnode.dom
-							let animation = null
-							if (dialogType === DialogType.EditLarge) {
-								vnode.dom.style.transform = `translateY(${window.innerHeight}px)`
-								animation = animations.add(this._domDialog, transform(transform.type.translateY, window.innerHeight, 0))
-							} else {
-								let bgcolor = getElevatedBackground()
-								let children = Array.from(this._domDialog.children)
-								children.forEach(child => child.style.opacity = '0')
-								this._domDialog.style.backgroundColor = `rgba(0, 0, 0, 0)`
-								animation = Promise.all([
-									animations.add(this._domDialog, alpha(alpha.type.backgroundColor, bgcolor, 0, 1)),
-									animations.add(children, opacity(0, 1, true), {delay: DefaultAnimationTime / 2})
-								])
-							}
+					}, [
 
-							// select first input field. blur first to avoid that users can enter text in the previously focused element while the animation is running
-							window.requestAnimationFrame(() => {
-								if (document.activeElement && typeof document.activeElement.blur === "function") {
-									document.activeElement.blur()
+						m(this._getDialogStyle(dialogType) + dialogAttrs("dialog-title", "dialog-message"), {
+							onclick: (e: MouseEvent) => e.stopPropagation(), // do not propagate clicks on the dialog as the Modal expects all propagated clicks to be clicks on the background
+							oncreate: vnode => {
+								this._domDialog = vnode.dom
+								let animation = null
+								if (dialogType === DialogType.EditLarge) {
+									vnode.dom.style.transform = `translateY(${window.innerHeight}px)`
+									animation = animations.add(this._domDialog, transform(transform.type.translateY, window.innerHeight, 0))
+								} else {
+									let bgcolor = getElevatedBackground()
+									let children = Array.from(this._domDialog.children)
+									children.forEach(child => child.style.opacity = '0')
+									this._domDialog.style.backgroundColor = `rgba(0, 0, 0, 0)`
+									animation = Promise.all([
+										animations.add(this._domDialog, alpha(alpha.type.backgroundColor, bgcolor, 0, 1)),
+										animations.add(children, opacity(0, 1, true), {delay: DefaultAnimationTime / 2})
+									])
 								}
-							})
-							animation.then(() => {
-								this._focusOnLoadFunction()
-								this._wasFocusOnLoadCalled = true
-							})
-						},
-					}, m(childComponent))
+
+								// select first input field. blur first to avoid that users can enter text in the previously focused element while the animation is running
+								window.requestAnimationFrame(() => {
+									if (document.activeElement && typeof document.activeElement.blur === "function") {
+										document.activeElement.blur()
+									}
+								})
+								animation.then(() => {
+									this._focusOnLoadFunction()
+									this._wasFocusOnLoadCalled = true
+								})
+							},
+						}, m(childComponent)),
+						this._injectionRightAttrs ? m(DialogInjectionRight, this._injectionRightAttrs) : null
+					]
 				)
 			)
 		}
+	}
+
+	setInjectionRight(injectionRightAttrs: DialogInjectionRightAttrs<*>) {
+		this._injectionRightAttrs = injectionRightAttrs
 	}
 
 	_defaultFocusOnLoad() {
@@ -152,6 +163,7 @@ export class Dialog {
 			}
 		}
 	}
+
 
 	/**
 	 * By default the focus is set on the first text field after this dialog is fully visible. This behavior can be overwritten by calling this function.
@@ -348,6 +360,7 @@ export class Dialog {
 		})
 	}
 
+
 	/**
 	 * Simpler version of {@link Dialog#confirmMultiple} with just two options: no and yes (or another confirmation).
 	 * @return Promise, which is resolved with user selection - true for confirm, false for cancel.
@@ -364,8 +377,6 @@ export class Dialog {
 			]
 			const dialog = Dialog.confirmMultiple(messageIdOrMessageFunction, buttonAttrs, resolve)
 		})
-
-
 	}
 
 
@@ -659,19 +670,13 @@ export class Dialog {
 		})
 	}
 
-	static largeDialogN<T>(headerBarAttrs: DialogHeaderBarAttrs, child: Class<MComponent<$Attrs<T>>>, childAttrs: $Attrs<T>, rightChild?: Component): Dialog {
+	static largeDialogN<T>(headerBarAttrs: DialogHeaderBarAttrs, child: Class<MComponent<$Attrs<T>>>, childAttrs: $Attrs<T>): Dialog {
 		return new Dialog(DialogType.EditLarge, {
-			view: (vnode) => {
+			view: () => {
 				return m("", [
 					m(".dialog-header.plr-l", m(DialogHeaderBar, headerBarAttrs)),
 					m(".dialog-container.scroll",
-						m(".fill-absolute.plr-l", m(child, childAttrs))),
-					rightChild ? m(".abs", {style: {right: px(0)}}, m(rightChild)) : null
-					/**
-					 *  It is a bit tricky to get the div to align outside the dialog.
-					 *  By CSS default, the element will always try to align its top left corner to the top left corner of its parent.
-					 *  When we move the ".abs" wrapper to the most right (right: 0px), it will force the wrapped element to be outside the Dialog.
-					 */
+						m(".fill-absolute.plr-l", m(child, childAttrs)))
 				])
 			}
 		})
