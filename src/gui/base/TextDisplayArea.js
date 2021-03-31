@@ -30,7 +30,7 @@ export class TextDisplayArea implements MComponent<TextDisplayAreaAttrs> {
 					minHeight: px(inputLineHeight)
 				},
 				disabled: true,
-			}, vnode.attrs.value)
-		]
+			}, vnode.attrs.value),
+		])
 	}
 }

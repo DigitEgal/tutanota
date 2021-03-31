@@ -26,6 +26,7 @@ import stream from "mithril/stream/stream.js"
 import type {ContactAddress} from "../../api/entities/tutanota/ContactAddress"
 import {ButtonN} from "../../gui/base/ButtonN"
 import type {ContactPhoneNumber} from "../../api/entities/tutanota/ContactPhoneNumber"
+import {downcast, noOp} from "../../api/common/utils/Utils"
 
 assertMainOrNode()
 
@@ -57,8 +58,18 @@ export class ContactViewer implements Lifecycle<void> {
 		this.contactAppellation = (title + fullName + nickname).trim()
 		this.formattedBirthday = this._hasBirthday() ? formatBirthdayOfContact(this.contact) : null
 
-		this._setupShortcuts()
+		let shortcuts = [
+			{
+				key: Keys.E,
+				exec: () => this.edit(),
+				help: "editContact_label"
+			},
+		]
+
+		this.oncreate = () => keyManager.registerShortcuts(shortcuts)
+		this.onremove = () => keyManager.unregisterShortcuts(shortcuts)
 	}
+
 
 	view(): Children {
 		return [
@@ -86,7 +97,7 @@ export class ContactViewer implements Lifecycle<void> {
 					m("hr.hr.mt.mb"),
 				]),
 				this._renderMailAddressesAndPhones(),
-				this._renderAddressesAndSocialIds(addresses, socials),
+				this._renderAddressesAndSocialIds(),
 				this._renderComment(),
 			])
 		]
@@ -219,11 +230,11 @@ export class ContactViewer implements Lifecycle<void> {
 		const showButton = m(ButtonN, {
 			label: 'showAddress_alt',
 			click: () => null,
-			icon: Icons.Pin
+			icon: () => Icons.Pin
 		})
 
 		return m(TextFieldN, {
-			label: () => getContactAddressTypeLabel(downcast<ContactAddressTypeEnum>(address.type), customTypeName),
+			label: () => getContactAddressTypeLabel(downcast<ContactAddressTypeEnum>(address.type), address.customTypeName),
 			value: stream(address.address),
 			disabled: true,
 			type: Type.Area,
@@ -278,19 +289,6 @@ export class ContactViewer implements Lifecycle<void> {
 				"", appendEmailSignature("", logins.getUserController().props))
 				.then(editor => editor.show())
 		})
-	}
-
-	_setupShortcuts() {
-		let shortcuts = [
-			{
-				key: Keys.E,
-				exec: () => this.edit(),
-				help: "editContact_label"
-			},
-		]
-
-		this.oncreate = () => keyManager.registerShortcuts(shortcuts)
-		this.onremove = () => keyManager.unregisterShortcuts(shortcuts)
 	}
 
 	delete() {
