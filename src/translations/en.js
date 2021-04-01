@@ -1363,7 +1363,7 @@ export default {
 		"groupCapabilityWrite_label": "Read and write",
 		"groupCapabilityRead_label": "Read only",
 		"leaveGroup_action": "Leave group",
-		"templateGroupInvitations_label": "Template invitations",
+		"templateGroupInvitations_label": "Template list invitations",
 		"confirmDeleteTemplateGroup_msg": "Are you sure you to delete this template list? All of the templates will be lost (forever)",
 		"confirmLeaveTemplateGroup_msg": "Are you sure you want to stop using this template list? The owner will have to re-invite you",
 		"templateGroupParticipants_label": "Users of the template list \"{groupName}\"",

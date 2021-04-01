@@ -183,22 +183,22 @@ export class SettingsView implements CurrentView {
 					content: m(".flex.flex-grow.col", [
 						m(SidebarSection, {
 							name: "userSettings_label",
-						}, this._renderSidebarSectionChildren(this._userFolders)),
+						}, [
+							this._renderSidebarSectionChildren(this._userFolders),
+							ownTemplates.length > 0
+								? ownTemplates.map(folder => this._renderTemplateFolderRow(folder))
+								: m(SettingsFolderRow, {mainButtonAttrs: this._createSettingsFolderNavButton(this._dummyTemplateFolder)}),
+							sharedTemplates.map(folder => this._renderTemplateFolderRow(folder))
+						]),
 						logins.isUserLoggedIn() && logins.getUserController().isGlobalOrLocalAdmin()
 							? m(SidebarSection, {
 								name: "adminSettings_label",
 							}, this._renderSidebarSectionChildren(this._adminFolders))
 							: null,
-						m(SidebarSection, {name: "template_label"}, [
-							ownTemplates.length > 0
-								? ownTemplates.map(folder => this._renderTemplateFolderRow(folder))
-								: m(SettingsFolderRow, {mainButtonAttrs: this._createSettingsFolderNavButton(this._dummyTemplateFolder)}),
-							sharedTemplates.length > 0 || templateInvitations.length > 0
-								? m(SidebarSection, {name: "shared_label", isSubsection: true}, [
-									sharedTemplates.map(folder => this._renderTemplateFolderRow(folder)),
-									templateInvitations.map(invitation => this._renderTemplateInvitationFolderRow(invitation)),
-								]) : null
-						]),
+						templateInvitations.length > 0
+							? m(SidebarSection, {name: "templateGroupInvitations_label"},
+							templateInvitations.map(invitation => this._renderTemplateInvitationFolderRow(invitation)))
+							: null,
 						this._knowledgeBaseFolders.length > 0
 							? m(SidebarSection, {
 								name: "knowledgebase_label",
